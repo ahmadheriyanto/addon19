@@ -1,0 +1,18 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Addon19",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": false,
+            "python": "/home/odoo/odoo-dev/19/venv-odoo19/bin/python3",
+            "program": "~/odoo-dev/19/odoo/odoo-bin",
+            "args": ["--config","~/odoo-dev/19/config/odoo19.conf"],
+            "console": "integratedTerminal",
+        }
+    ]
+}
