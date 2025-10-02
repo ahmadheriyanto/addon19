@@ -1,0 +1,141 @@
+<odoo>
+    <!-- List View for bcproject -->
+    <record id="view_bcproject_list" model="ir.ui.view">
+        <field name="name">bcproject.list</field>
+        <field name="model">bcproject</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="job_no"/>
+                <field name="job_desc"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View for bcproject with subform for bctask and bcplanningline -->
+    <record id="view_bcproject_form" model="ir.ui.view">
+        <field name="name">bcproject.form</field>
+        <field name="model">bcproject</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="job_no"/>
+                        <field name="job_desc"/>
+                    </group>
+                    <notebook>
+                        <page string="Tasks">
+                            <field name="task_line">
+                                <list editable="bottom">
+                                    <field name="task_no"/>
+                                    <field name="task_desc"/>
+                                    <!-- Inline Planning Lines Subform inside Tasks -->
+                                    <field name="planning_line">
+                                        <list editable="bottom">
+                                            <field name="planning_line_no"/>
+                                            <field name="planning_line_desc"/>
+                                        </list>
+                                    </field>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- List View for bctask -->
+    <record id="view_bctask_list" model="ir.ui.view">
+        <field name="name">bctask.list</field>
+        <field name="model">bctask</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="task_no"/>
+                <field name="task_desc"/>
+                <field name="job_id"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View for bctask with subform for bcplanningline -->
+    <record id="view_bctask_form" model="ir.ui.view">
+        <field name="name">bctask.form</field>
+        <field name="model">bctask</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="task_no"/>
+                        <field name="task_desc"/>
+                        <field name="job_id"/>
+                    </group>
+                    <notebook>
+                        <page string="Planning Lines">
+                            <field name="planning_line">
+                                <list editable="bottom">
+                                    <field name="planning_line_no"/>
+                                    <field name="planning_line_desc"/>
+                                    <field name="job_id"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- List View for bcplanningline -->
+    <record id="view_bcplanningline_list" model="ir.ui.view">
+        <field name="name">bcplanningline.list</field>
+        <field name="model">bcplanningline</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="planning_line_no"/>
+                <field name="planning_line_desc"/>
+                <field name="job_id"/>
+                <field name="task_id"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View for bcplanningline -->
+    <record id="view_bcplanningline_form" model="ir.ui.view">
+        <field name="name">bcplanningline.form</field>
+        <field name="model">bcplanningline</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="planning_line_no"/>
+                        <field name="planning_line_desc"/>
+                        <field name="job_id"/>
+                        <field name="task_id"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Actions and Menus (optional, for navigation) -->
+    <record id="action_bcproject" model="ir.actions.act_window">
+        <field name="name">Projects</field>
+        <field name="res_model">bcproject</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <record id="action_bctask" model="ir.actions.act_window">
+        <field name="name">Tasks</field>
+        <field name="res_model">bctask</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <record id="action_bcplanningline" model="ir.actions.act_window">
+        <field name="name">Planning Lines</field>
+        <field name="res_model">bcplanningline</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_bcproject_root" name="Planning" web_icon="bcplanning,static/description/icon.png"/>
+    <menuitem id="menu_bcproject_main" name="Projects" parent="menu_bcproject_root" action="action_bcproject"/>
+    <menuitem id="menu_bctask_main" name="Tasks" parent="menu_bcproject_root" action="action_bctask"/>
+    <menuitem id="menu_bcplanningline_main" name="Planning Lines" parent="menu_bcproject_root" action="action_bcplanningline"/>
+</odoo>
