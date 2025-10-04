@@ -17,14 +17,24 @@
     'version': '0.1',
 
     # any module necessary for this one to work correctly
-    'depends': ['base'],
-
+    'depends': [
+        'base',
+        'web',
+        'website',
+    ],
     # always loaded
     'data': [
         'security/ir.model.access.csv',
         'views/bc_planning_views.xml',
+        'views/portal_projects.xml',
+        'views/remove_website_odoo_logo.xml',
         'views/templates.xml',
     ],
+    'assets': {
+        'web.assets_frontend': [
+            '/bcplanning/static/src/js/projects_tabulator.js',
+        ],
+    },
     # only loaded in demonstration mode
     'demo': [
         'demo/demo.xml',

@@ -2,3 +2,5 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_bcplanning_bcproject,bcplanning.bcproject,model_bcproject,base.group_user,1,1,1,1
 access_bcplanning_bctask,bcplanning.bctask,model_bctask,base.group_user,1,1,1,1
 access_bcplanning_bcplanningline,bcplanning.bcplanningline,model_bcplanningline,base.group_user,1,1,1,1
+access_bcplanning_bcexternaluser,bcplanning.bcexternaluser,model_bcexternaluser,base.group_user,1,1,1,1
+

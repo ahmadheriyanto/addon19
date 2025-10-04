@@ -6,24 +6,27 @@ class bcplanning_project(models.Model):
     _name = 'bcproject'
     _description = 'bcproject'
     _rec_name = 'job_no'
-
-    job_no = fields.Char(required=True)
-    job_desc = fields.Char()
+    
+    job_no = fields.Char(string="Job No.", required=True)
+    job_desc = fields.Char(string="Description")
+    partner_id = fields.Many2one('res.partner', string='Partner', domain="[]")
     task_line = fields.One2many(
         comodel_name='bctask',
         inverse_name='job_id',
         string="Task Lines",
         copy=True, bypass_search_access=True)
 
-    _sql_constraints = [
-        ('job_no_unique', 'unique(job_no)', 'Job No must be unique!')
-    ]    
+    @api.constrains('job_no')
+    def _check_job_no_unique(self):
+        for record in self:
+            # search for another record with the same job_no
+            existing = self.env['bcproject'].search([
+                ('job_no', '=', record.job_no),
+                ('id', '!=', record.id)
+            ], limit=1)
+            if existing:
+                raise ValidationError('Job No must be unique!')
 
-    # value2 = fields.Float(compute="_value_pc", store=True)
-    # @api.depends('value')
-    # def _value_pc(self):
-    #     for record in self:
-    #         record.value2 = float(record.value) / 100
 
 class bcplanning_task(models.Model):
     _name = 'bctask'
@@ -42,13 +45,18 @@ class bcplanning_task(models.Model):
         string="Planning Lines",
         copy=True, bypass_search_access=True)
 
-    _sql_constraints = [
-        (
-            'unique_task_per_job',
-            'unique(task_no, job_id)',
-            'Task No must be unique per Job!'
-        )
-    ]
+    
+    @api.constrains('task_no', 'job_id')
+    def _check_job_no_unique(self):
+        for record in self:
+            # search for another record with the same task_no and job_id
+            existing = self.env['bctask'].search([
+                ('task_no', '=', record.task_no),
+                ('job_id', '=', record.job_id),
+                ('id', '!=', record.id)
+            ], limit=1)
+            if existing:
+                raise ValidationError('Task No must be unique per Job No.!')
 
 
 class bcplanning_line(models.Model):
@@ -57,20 +65,32 @@ class bcplanning_line(models.Model):
     _rec_name = 'planning_line_no'
 
     planning_line_no = fields.Char(required=True)
-    planning_line_desc = fields.Char()
-    job_id = fields.Many2one(
-        comodel_name='bcproject',
-        string="Project Reference",
-        required=True, ondelete='cascade', index=True, copy=False)
+    planning_line_desc = fields.Char()    
     task_id = fields.Many2one(
         comodel_name='bctask',
         string="Task Reference",
         required=True, ondelete='cascade', index=True, copy=False)
+    job_id = fields.Many2one(
+        comodel_name='bcproject',
+        string="Project Reference",
+        compute="_get_job_id", store=True)
 
-    _sql_constraints = [
-        (
-            'unique_planning_line_no_per_job_task',
-            'unique(planning_line_no, job_id, task_id)',
-            'Planning Line No must be unique per Job and Task!'
-        )
-    ]
+    @api.depends('task_id')
+    def _get_job_id(self):
+        for record in self:
+            record.job_id = False
+            task = self.env['bctask'].search([('id','=',record.task_id)])
+            if task:
+                record.job_id = task[0].job_id.id
+
+    @api.constrains('planning_line_no', 'task_id')
+    def _check_job_no_unique(self):
+        for record in self:
+            # search for another record with the same planning_line_no, task_id
+            existing = self.env['bcplanningline'].search([
+                ('planning_line_no', '=', record.planning_line_no),
+                ('task_id', '=', record.task_id),            
+                ('id', '!=', record.id)
+            ], limit=1)
+            if existing:
+                raise ValidationError('Planning Line No must be unique per Task No.!')

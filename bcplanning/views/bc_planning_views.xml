@@ -7,6 +7,7 @@
             <list>
                 <field name="job_no"/>
                 <field name="job_desc"/>
+                <field name="partner_id"/>
             </list>
         </field>
     </record>
@@ -21,6 +22,7 @@
                     <group>
                         <field name="job_no"/>
                         <field name="job_desc"/>
+                        <field name="partner_id"/>
                     </group>
                     <notebook>
                         <page string="Tasks">
@@ -117,6 +119,18 @@
         </field>
     </record>
 
+    <!-- List View for external user vs vendor -->
+    <record id="view_externaluser_list" model="ir.ui.view">
+        <field name="name">bcexternaluser.list</field>
+        <field name="model">bcexternaluser</field>
+        <field name="arch" type="xml">
+            <list editable="top">
+                <field name="user_id"/>
+                <field name="vendor_id"/>
+            </list>
+        </field>
+    </record>
+
     <!-- Actions and Menus (optional, for navigation) -->
     <record id="action_bcproject" model="ir.actions.act_window">
         <field name="name">Projects</field>
@@ -133,9 +147,15 @@
         <field name="res_model">bcplanningline</field>
         <field name="view_mode">list,form</field>
     </record>
+    <record id="action_bcexternaluser" model="ir.actions.act_window">
+        <field name="name">External User vs Vendor</field>
+        <field name="res_model">bcexternaluser</field>
+        <field name="view_mode">list</field>
+    </record>
 
-    <menuitem id="menu_bcproject_root" name="Planning" web_icon="bcplanning,static/description/icon.png"/>
+    <menuitem id="menu_bcproject_root" name="Planning" web_icon="bcplanning,static/description/icon.png" sequence="1"/>
     <menuitem id="menu_bcproject_main" name="Projects" parent="menu_bcproject_root" action="action_bcproject"/>
     <menuitem id="menu_bctask_main" name="Tasks" parent="menu_bcproject_root" action="action_bctask"/>
     <menuitem id="menu_bcplanningline_main" name="Planning Lines" parent="menu_bcproject_root" action="action_bcplanningline"/>
+    <menuitem id="menu_bcexternaluser_main" name="External User vs Vendor" parent="menu_bcproject_root" action="action_bcexternaluser"/>
 </odoo>
