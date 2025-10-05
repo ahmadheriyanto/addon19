@@ -4,7 +4,7 @@
             <div class="container my-5">
                 <h2>Projects</h2>
                 <!-- Button to add new project -->
-                <button id="add-project" class="btn btn-primary mb-3">Add Project</button>
+                <!-- <button id="add-project" class="btn btn-primary mb-3">Add Project</button> -->
                 <!-- Tabulator grid container -->
                 <div id="projects-table"></div>
             </div>

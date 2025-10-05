@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <template id="web_partner_project_template">
+        <t t-call-assets="web.assets_frontend" t-js="true"/>
+        <t t-call="website.layout">
+            <div class="container">
+                <div class="header">
+                    <h3>Partner Project List</h3>
+                </div>
+                <div class="s_website_form_rows row s_col_no_bgcolor">
+                    <div class="row s_col_no_resize s_col_no_bgcolor">
+                        <label class="col-form-label col-sm-auto s_website_form_label" style="width: 200px" for="studio1">
+                            <span class="s_website_form_label_content">Partner Name</span>
+                        </label>
+                        <div class="col-sm"><span t-esc="partner_name"/></div>
+                        <div class="row s_col_no_resize s_col_no_bgcolor">
+                            <label class="col-form-label col-sm-auto s_website_form_label" style="width: 200px" for="studio1">
+                                <span class="s_website_form_label_content">Number of Projects</span>
+                            </label>
+                            <div class="col-sm">2</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class='row ml-1' style="width:99%;">
+                            <div class="form-group col-12 show_total_project">
+                                <div class="row s_col_no_resize s_col_no_bgcolor">
+                                    <table class="table table-bordered mt-3 total_project_costs" id="project_table">
+                                        <thead>
+                                            <tr>
+                                                <td><strong>Project No.</strong></td>
+                                                <td><strong>Project Name</strong></td>
+                                                <td><strong>Number of Task</strong></td>
+                                                <td>Open Tasks</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="projects" t-as="project">
+                                                <tr>
+                                                    <td><span t-esc="project['job_no']"/></td>
+                                                    <td><span t-esc="project['job_desc']"/></td>
+                                                    <td><span t-esc="project['task_count']"/></td>
+                                                    <td>
+                                                        <button class="btn fa fa-bars open_project_planning_line"
+                                                                style="padding: 0px; 
+                                                                        margin-left: -6px;
+                                                                        margin-top: 6px;
+                                                                        margin-bottom:15px;"
+                                                                name="Tasks"
+                                                                aria-label="Task and Resource"
+                                                                data-job_id="[[ project['id'] ]]"
+                                                                data-job_no="[[ project['job_no'] ]]"
+                                                                data-job_name="[[ project['job_desc'] ]]"
+                                                        ></button>
+                                                        <!-- Hidden spans for data -->
+                                                        <span class="data_project_id" style="display:none"><t t-esc="project['id']"/></span>
+                                                        <span class="data_project_no" style="display:none"><t t-esc="project['job_no']"/></span>
+                                                        <span class="data_project_desc" style="display:none"><t t-esc="project['job_desc']"/></span>
+                                                    </td>                                                
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>     
+        </t>
+    </template>
+</odoo>

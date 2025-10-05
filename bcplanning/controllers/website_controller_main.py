@@ -12,5 +12,5 @@ class WebsiteCustomLoginRedirect(Website):
             if request.env['res.users'].browse(uid)._is_internal():
                 redirect = '/odoo?' + request.httprequest.query_string.decode()
             else:
-                redirect = '/my/projects'
+                redirect = '/partner/projects'
         return super()._login_redirect(uid, redirect=redirect)

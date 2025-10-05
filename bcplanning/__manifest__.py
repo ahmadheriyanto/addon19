@@ -26,13 +26,15 @@
     'data': [
         'security/ir.model.access.csv',
         'views/bc_planning_views.xml',
-        'views/portal_projects.xml',
+        # 'views/portal_projects.xml',
         'views/remove_website_odoo_logo.xml',
-        'views/templates.xml',
+        'views/website_menu.xml',
+        'views/partner_projects.xml',
+        'views/partner_tasks.xml',
     ],
     'assets': {
-        'web.assets_frontend': [
-            '/bcplanning/static/src/js/projects_tabulator.js',
+        'web.assets_frontend': [            
+            '/bcplanning/static/src/js/partner_project.js',
         ],
     },
     # only loaded in demonstration mode
@@ -42,4 +44,6 @@
     "application": True,
     "installable": True,
 }
+
+# '/bcplanning/static/src/js/projects_tabulator.js',
 
