@@ -7,6 +7,7 @@ from odoo.exceptions import ValidationError
 
 class PlanningApiController(http.Controller):
 
+    # ********************* api_key group ********************************************************
     @http.route('/hello', type='http', auth='api_key', methods=['GET'], csrf=False)
     def test_hello(self, **post):
         user = request.env.user
@@ -25,7 +26,26 @@ class PlanningApiController(http.Controller):
 
         return Response(json.dumps(rtv),content_type='application/json;charset=utf-8',status=200)
     
+    @http.route('/planning/partners', type='http', auth='api_key', methods=['GET'], csrf=False)
+    def getpartners(self):
+        vendor_recs = []
+        vendors = request.env['bcexternaluser'].search([])
+        if vendors:
+            vendors = vendors.mapped('vendor_id')
+        if vendors:
+            for ven in vendors:
+                vendor_recs.append({
+                    'vendor_id': ven.id,
+                    'vendor_name': ven.name,
+                })
+        return Response(json.dumps(vendor_recs),content_type='application/json;charset=utf-8',status=200)
 
+
+
+    # ********************* end of api_key group *****************************************************
+
+
+    # ********************* http group ********************************************************    
     @http.route('/partner/projects', type='http', auth='user', website=True)
     def partner_project(self):
         user = request.env.user
@@ -95,6 +115,11 @@ class PlanningApiController(http.Controller):
         }
         return request.render('bcplanning.web_partner_task_template', datas)
         
+    # ********************* end of http group ********************************************************
+
+
+
+    
 
     # # render your QWeb template (portal_projects) as a portal page
     # @http.route('/my/projects', type='http', auth='user', website=True)

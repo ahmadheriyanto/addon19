@@ -7,6 +7,5 @@
 
     <template id="brand_promotion" inherit_id="website.brand_promotion">
         <xpath expr="//t[@t-call='web.brand_promotion_message']" position="replace"/>
-        <!-- <div><span><strong>Powered by BC365optimizers.com</strong></span></div> -->
     </template>
 </odoo>
