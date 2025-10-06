@@ -93,7 +93,7 @@ class bcplanning_task(models.Model):
             # search for another record with the same task_no and job_id
             existing = self.env['bctask'].search([
                 ('task_no', '=', record.task_no),
-                ('job_id', '=', record.job_id),
+                ('job_id', '=', record.job_id.id),
                 ('id', '!=', record.id)
             ], limit=1)
             if existing:
@@ -130,7 +130,7 @@ class bcplanning_line(models.Model):
             # search for another record with the same planning_line_no, task_id
             existing = self.env['bcplanningline'].search([
                 ('planning_line_no', '=', record.planning_line_no),
-                ('task_id', '=', record.task_id),            
+                ('task_id', '=', record.task_id.id),            
                 ('id', '!=', record.id)
             ], limit=1)
             if existing:
