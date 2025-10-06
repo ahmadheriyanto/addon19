@@ -52,8 +52,8 @@ class bcplanning_project(models.Model):
             })
 
             for pl_data in planninglines:
-                planning_line_no = pl_data.get('bc_jobplanningline_no')
-                planning_line_desc = pl_data.get('bc_jobplanningline_desc')
+                planning_line_no = pl_data.get('bc_jobplanningline_lineno')
+                planning_line_desc = pl_data.get('bc_jobplanningline_no') + ' - ' + pl_data.get('bc_jobplanningline_desc')
 
                 self.env['bcplanningline'].create({
                     'planning_line_no': planning_line_no or '',  # required field fallback
