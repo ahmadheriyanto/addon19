@@ -32,12 +32,21 @@ class bcplanning_project(models.Model):
             posted_data = json.loads(posted_data)
         job_no = posted_data.get('bc_project_no')
         job_desc = posted_data.get('bc_project_desc')
+        job_partner_id = posted_data.get('partner_id')
+        if not job_partner_id:
+            raise ValidationError(f'Parner id not found for Project No. {job_no}')
+        res_partner = self.env['res.partner'].sudo().search([('id','=',job_partner_id)])
+        if not res_partner:
+            raise ValidationError(f'Parner not found for partner id {job_partner_id}')
+        res_partner = res_partner[0]
+
         tasks = posted_data.get('tasks', [])
 
         # Create the bcproject record
         bcproject = self.env['bcproject'].create({
             'job_no': job_no,
             'job_desc': job_desc,
+            'partner_id': res_partner.id,
         })
 
         for task_data in tasks:
