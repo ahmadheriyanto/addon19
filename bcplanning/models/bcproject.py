@@ -27,6 +27,11 @@ class bcplanning_project(models.Model):
             if existing:
                 raise ValidationError('Job No must be unique!')
 
+    def projectcreationfrombc(self, posted_data):
+        print(posted_data)
+        return posted_data
+
+        
 
 class bcplanning_task(models.Model):
     _name = 'bctask'

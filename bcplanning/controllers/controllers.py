@@ -40,6 +40,17 @@ class PlanningApiController(http.Controller):
                 })
         return Response(json.dumps(vendor_recs),content_type='application/json;charset=utf-8',status=200)
 
+    @http.route('/planning/projectcreationfrombc', type='http', auth='api_key', methods=['POST'], csrf=False)
+    def projectcreationfrombc(self, **kwargs):
+        try:
+            posted_data = json.loads(request.httprequest.data.decode('utf-8'))
+        except Exception as e:
+            # print("Error parsing JSON payload:", e)
+            posted_data = {}    
+        result = request.env['bcproject'].projectcreationfrombc(posted_data)    
+        # Return as JSON
+        response = json.dumps({'status': 'success', 'received': result})
+        return request.make_response(response, headers=[('Content-Type', 'application/json')])
 
 
     # ********************* end of api_key group *****************************************************
