@@ -1,6 +1,6 @@
 from odoo import models, fields, api
 from odoo.exceptions import ValidationError
-
+import json
 
 class bcplanning_project(models.Model):
     _name = 'bcproject'
@@ -28,10 +28,46 @@ class bcplanning_project(models.Model):
                 raise ValidationError('Job No must be unique!')
 
     def projectcreationfrombc(self, posted_data):
-        print(posted_data)
-        return posted_data
+        if isinstance(posted_data, str):
+            posted_data = json.loads(posted_data)
+        job_no = posted_data.get('bc_project_no')
+        job_desc = posted_data.get('bc_project_desc')
+        tasks = posted_data.get('tasks', [])
 
-        
+        # Create the bcproject record
+        bcproject = self.env['bcproject'].create({
+            'job_no': job_no,
+            'job_desc': job_desc,
+        })
+
+        for task_data in tasks:
+            task_no = task_data.get('bc_task_no')
+            task_desc = task_data.get('bc_task_desc')
+            planninglines = task_data.get('bc_planninglines', [])
+
+            bctask = self.env['bctask'].create({
+                'task_no': task_no,
+                'task_desc': task_desc,
+                'job_id': bcproject.id,
+            })
+
+            for pl_data in planninglines:
+                planning_line_no = pl_data.get('bc_jobplanningline_no')
+                planning_line_desc = pl_data.get('bc_jobplanningline_desc')
+
+                self.env['bcplanningline'].create({
+                    'planning_line_no': planning_line_no or '',  # required field fallback
+                    'planning_line_desc': planning_line_desc,
+                    'task_id': bctask.id,
+                })
+
+        return {
+            'job_id': bcproject.id,
+            'job_no': bcproject.job_no,
+            'created_tasks': len(tasks),
+        }
+
+
 
 class bcplanning_task(models.Model):
     _name = 'bctask'
