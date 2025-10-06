@@ -134,4 +134,4 @@ class bcplanning_line(models.Model):
                 ('id', '!=', record.id)
             ], limit=1)
             if existing:
-                raise ValidationError('Planning Line No must be unique per Task No.!')
+                raise ValidationError(f'Planning Line No must be unique per Task No.!, duplicates on planning_line_no = {record.planning_line_no}, task No = {record.task_id.task_no}, Job No = {record.job_id.job_no}')
