@@ -1,6 +1,4 @@
-// Minimal mobile scanner JS (vanilla). Uses BarcodeDetector when available, otherwise falls back to jsQR (if you include it).
-// Place this file in stock_mobile_scanner/static/src/js/mobile_scanner.js
-
+/* Minimal mobile scanner JS - improved mobile UX (vanilla) */
 (function () {
     'use strict';
 
@@ -13,15 +11,24 @@
     const btnComplete = document.getElementById('btn-complete');
     const qtyInput = document.getElementById('qty');
     const lotInput = document.getElementById('lot');
+    const lastAction = document.getElementById('last_action');
+    const scanFeedback = document.getElementById('scan_feedback');
 
     let stream = null;
     let scanning = false;
     let detector = null;
     let rafId = null;
+    let lastDetected = '';
+    let lastCreated = null;
 
     function log(msg) {
-        const t = new Date().toISOString();
-        logEl.textContent = t + ' ' + msg + "\\n" + logEl.textContent;
+        const t = new Date().toLocaleTimeString();
+        logEl.textContent = `${t} ${msg}\n` + logEl.textContent;
+    }
+
+    function setFeedback(msg, level='info') {
+        scanFeedback.textContent = msg;
+        scanFeedback.style.color = level === 'error' ? '#c0392b' : '#2c3e50';
     }
 
     async function startCamera() {
@@ -33,15 +40,21 @@
             btnToggle.textContent = 'Stop Camera';
             // init detector if available
             if ('BarcodeDetector' in window) {
-                const formats = await BarcodeDetector.getSupportedFormats();
-                detector = new BarcodeDetector({formats: formats});
-                log('Using native BarcodeDetector, formats: ' + formats.join(','));
+                try {
+                    const formats = await BarcodeDetector.getSupportedFormats();
+                    detector = new BarcodeDetector({formats: formats});
+                    log('Using native BarcodeDetector: ' + formats.join(','));
+                    setFeedback('Camera ready — scanning…');
+                } catch (e) {
+                    detector = null;
+                    setFeedback('Camera ready (no native detector).', 'info');
+                }
             } else {
-                log('BarcodeDetector not available; using canvas fallback (requires jsQR).');
-                detector = null;
+                setFeedback('Camera ready — using canvas fallback. If no detection, add fallback library.', 'info');
             }
             tick();
         } catch (err) {
+            setFeedback('Camera permission or start error', 'error');
             log('Camera start error: ' + err);
         }
     }
@@ -56,6 +69,7 @@
         scanning = false;
         btnToggle.textContent = 'Start Camera';
         if (rafId) cancelAnimationFrame(rafId);
+        setFeedback('Camera stopped');
     }
 
     btnToggle.addEventListener('click', function () {
@@ -78,42 +92,43 @@
                         onDetected(code);
                     }
                 } catch (err) {
-                    // detection sometimes throws, ignore
+                    // ignore detection errors
                 }
             } else {
-                // fallback: use jsQR if present
+                // fallback: try jsQR if available
                 if (window.jsQR) {
-                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    const code = jsQR(imageData.data, imageData.width, imageData.height);
-                    if (code && code.data) onDetected(code.data);
+                    try {
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const code = jsQR(imageData.data, imageData.width, imageData.height);
+                        if (code && code.data) onDetected(code.data);
+                    } catch (e) {}
                 }
             }
         }
         rafId = requestAnimationFrame(tick);
     }
 
-    let lastDetected = '';
     function onDetected(value) {
         if (!value) return;
-        if (value === lastDetected) return; // reduce duplicates
+        // simple de-dup throttle
+        if (value === lastDetected) return;
         lastDetected = value;
         scannedInput.value = value;
+        setFeedback('Detected: ' + value);
         log('Detected: ' + value);
-        // auto-send optional: here we don't auto create to avoid mistakes; user presses Create/Complete
+        // Small vibration when supported
+        if (navigator.vibrate) navigator.vibrate(70);
     }
 
     btnCreate.addEventListener('click', async function () {
         const barcode = scannedInput.value.trim();
         const qty = qtyInput.value || 0;
         const lot = lotInput.value || '';
-        if (!barcode) { log('No barcode'); return; }
+        if (!barcode) { setFeedback('No barcode to create', 'error'); return; }
 
-        const payload = {
-            product_barcode: barcode,
-            quantity: qty,
-            lot: lot,
-        };
-        log('Sending create: ' + JSON.stringify(payload));
+        const payload = { product_barcode: barcode, quantity: qty, lot: lot };
+        setFeedback('Sending create…');
+        log('Create payload: ' + JSON.stringify(payload));
         try {
             const res = await fetch('/mobile_warehouse/api/scan', {
                 method: 'POST',
@@ -122,22 +137,32 @@
                 body: JSON.stringify(payload),
             });
             const data = await res.json();
-            log('Create response: ' + JSON.stringify(data));
-            if (data.success) {
+            if (data.error) {
+                setFeedback('Create error: ' + data.error, 'error');
+                log('Create response error: ' + JSON.stringify(data));
+            } else {
+                setFeedback('Created picking ' + data.picking_id + ', move ' + data.move_id);
+                lastCreated = data;
+                lastAction.textContent = `Created move ${data.move_id} (picking ${data.picking_id})`;
+                log('Create response: ' + JSON.stringify(data));
+                // clear scanned value for next scan
                 scannedInput.value = '';
             }
         } catch (err) {
-            log('Create error: ' + err);
+            setFeedback('Create request failed', 'error');
+            log('Create request error: ' + err);
         }
     });
 
     btnComplete.addEventListener('click', async function () {
-        const moveId = prompt('Enter move id to complete (or leave blank to use last created move id):');
+        const defaultMove = lastCreated && lastCreated.move_id ? lastCreated.move_id : prompt('Enter move id to complete:');
         const qty = qtyInput.value || 0;
         const lot = lotInput.value || '';
-        if (!moveId) { log('No move id provided'); return; }
-        const payload = { move_id: moveId, qty_done: qty, lot_name: lot };
-        log('Sending complete: ' + JSON.stringify(payload));
+        if (!defaultMove) { setFeedback('No move id', 'error'); return; }
+
+        const payload = { move_id: defaultMove, qty_done: qty, lot_name: lot };
+        setFeedback('Completing move…');
+        log('Complete payload: ' + JSON.stringify(payload));
         try {
             const res = await fetch('/mobile_warehouse/api/complete', {
                 method: 'POST',
@@ -146,12 +171,20 @@
                 body: JSON.stringify(payload),
             });
             const data = await res.json();
-            log('Complete response: ' + JSON.stringify(data));
+            if (data.error) {
+                setFeedback('Complete error: ' + data.error, 'error');
+                log('Complete response error: ' + JSON.stringify(data));
+            } else {
+                setFeedback('Complete OK — picking state: ' + (data.picking_state || 'unknown'));
+                lastAction.textContent = `Completed move ${payload.move_id}`;
+                log('Complete response: ' + JSON.stringify(data));
+            }
         } catch (err) {
-            log('Complete error: ' + err);
+            setFeedback('Complete request failed', 'error');
+            log('Complete request error: ' + err);
         }
     });
 
-    // init small log
-    log('Mobile scanner loaded. Press Start Camera.');
+    // small init log
+    log('Mobile scanner ready. Tap Start Camera.');
 })();

@@ -1,3 +1,29 @@
-/* minimal CSS */
-#scanner-ui button { margin-right: 6px; }
-#mobile-log { max-height: 200px; overflow:auto; }
+/* Mobile-first clean styles for Stock Mobile Scanner */
+.o_mobile_scanner_page { background:#fff; min-height:100vh; padding-bottom:70px; }
+.o_mobile_scanner_header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid #f0f0f0; background:#fff; position:sticky; top:0; z-index:30; }
+.o_mobile_scanner_brand { display:flex; align-items:center; gap:10px; }
+.o_mobile_scanner_logo { height:36px; width:auto; border-radius:6px; }
+.o_mobile_scanner_header h1 { font-size:1.05rem; margin:0; font-weight:600; color:#2c3e50; }
+.o_mobile_scanner_status { font-size:0.85rem; color:#6c757d; }
+
+.o_mobile_scanner_main { padding:12px; }
+.o_scanner_card { border-radius:12px; overflow:hidden; background:#fff; }
+
+.o_video_wrap { position:relative; background:#000; }
+.o_video { width:100%; height:calc(100vw * 0.6); object-fit:cover; display:block; }
+.o_camera_overlay { position:absolute; inset:0; pointer-events:none; display:flex; align-items:center; justify-content:center; }
+.o_overlay_border { width:78%; max-width:520px; aspect-ratio:1.8 / 1; border: 2px dashed rgba(255,255,255,0.25); border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.25) inset; }
+
+.o_scanner_body { background:#fff; }
+.o_scan_feedback { min-height:20px; font-weight:600; color:#333; }
+.o_last_action { font-size:0.9rem; color:#2a2a2a; margin-top:4px; }
+.o_mobile_log { background:#fbfbfb; border-radius:6px; padding:8px; height:88px; overflow:auto; margin:0; }
+
+.o_action_bar { position:sticky; bottom:0; left:0; right:0; gap:8px; padding:10px; background:linear-gradient(0deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85)); border-top:1px solid #eee; }
+.o_action_bar .btn { height:48px; font-size:1rem; border-radius:8px; }
+
+@media (min-width: 768px) {
+  .o_video { height:420px; }
+  .o_overlay_border { width:60%; }
+  .o_mobile_log { height:120px; }
+}

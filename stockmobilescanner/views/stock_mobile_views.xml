@@ -1,36 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
   <template id="mobile_warehouse_template" name="Mobile Warehouse Scanner">
-    <t t-call="web.layout">
-      <div class="container" style="padding: 10px;">
-        <h3>Mobile Warehouse Scanner</h3>
-        <div id="scanner-ui">
-          <video id="mobile-video" autoplay="autoplay" playsinline="playsinline" style="width:100%; max-height:60vh; background:#000;"></video>
-          <canvas id="mobile-canvas" style="display:none;"></canvas>
-
-          <div style="margin-top:10px;">
-            <label>Scanned barcode</label>
-            <input id="scanned-barcode" type="text" style="width:100%" />
+    <!-- Use website layout so website theme + Bootstrap are available -->
+    <t t-call="website.layout">
+      <!-- Ensure website frontend assets are included -->
+      <t t-call-assets="website.assets_frontend"/>
+      <div class="o_mobile_scanner_page">
+        <div class="o_mobile_scanner_header">
+          <div class="o_mobile_scanner_brand">
+            <img src="/logo.png?company=1" alt="logo" class="o_mobile_scanner_logo"/>
+            <h1>Mobile Scanner</h1>
           </div>
-
-          <div style="margin-top:10px; display:flex; gap:6px;">
-            <input id="qty" type="number" value="1" min="0" step="1" style="flex:1"/>
-            <input id="lot" type="text" placeholder="Lot/Serial (optional)" style="flex:2"/>
-          </div>
-
-          <div style="margin-top:10px; display:flex; gap:6px;">
-            <button id="btn-create" class="btn btn-primary">Create/Append Move</button>
-            <button id="btn-complete" class="btn btn-success">Complete Move</button>
-            <button id="btn-toggle" class="btn btn-secondary">Start Camera</button>
-          </div>
-
-          <div style="margin-top:10px;">
-            <pre id="mobile-log" style="white-space:pre-wrap; background:#f5f5f5; padding:8px;"></pre>
-          </div>
+          <div class="o_mobile_scanner_status">Logged as <span t-esc="request.env.user.name"/></div>
         </div>
 
-        <script type="text/javascript" src="/stockmobilescanner/static/src/js/mobile_scanner.js"></script>
-        <link rel="stylesheet" href="/stockmobilescanner/static/src/css/mobile_scanner.css"/>
+        <main class="o_mobile_scanner_main container-fluid">
+          <div class="o_scanner_card card shadow-sm">
+            <div class="o_video_wrap">
+              <video id="mobile-video" autoplay="autoplay" playsinline="playsinline" muted="muted" class="o_video"></video>
+              <canvas id="mobile-canvas" class="d-none"></canvas>
+              <div id="camera_overlay" class="o_camera_overlay">
+                <div class="o_overlay_border"></div>
+              </div>
+            </div>
+
+            <div class="o_scanner_body p-3">
+              <div class="form-group mb-2">
+                <label for="scanned-barcode" class="form-label small text-muted">Scanned code</label>
+                <input id="scanned-barcode" class="form-control form-control-lg" type="text" placeholder="Waiting for scan..." readonly="readonly"/>
+              </div>
+
+              <div class="row g-2 mb-2">
+                <div class="col-5">
+                  <label class="form-label small text-muted">Qty</label>
+                  <input id="qty" type="number" value="1" min="0" step="1" class="form-control form-control-lg"/>
+                </div>
+                <div class="col-7">
+                  <label class="form-label small text-muted">Lot / Serial (optional)</label>
+                  <input id="lot" type="text" placeholder="Lot / Serial" class="form-control form-control-lg"/>
+                </div>
+              </div>
+
+              <div id="scan_feedback" class="o_scan_feedback mb-2 text-wrap"></div>
+
+              <div class="o_recent_info mb-2">
+                <small class="text-muted">Last action</small>
+                <div id="last_action" class="o_last_action">—</div>
+              </div>
+
+              <div class="o_log_area mb-2">
+                <pre id="mobile-log" class="o_mobile_log small"></pre>
+              </div>
+            </div>
+
+            <div class="o_action_bar d-flex">
+              <button id="btn-toggle" class="btn btn-outline-secondary flex-fill me-1" type="button">Start Camera</button>
+              <button id="btn-create" class="btn btn-primary flex-fill me-1" type="button">Create</button>
+              <button id="btn-complete" class="btn btn-success flex-fill" type="button">Complete</button>
+            </div>
+          </div>
+        </main>
       </div>
     </t>
   </template>

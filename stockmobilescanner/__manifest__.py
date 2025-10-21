@@ -6,15 +6,27 @@
     "author": "Ahmad Heriyanto",
     "license": "LGPL-3",
     "website": "",
-    "depends": ["base", "stock", "product", "web"],
+    "depends": [
+        "base",
+        "stock",
+        "product",
+        "web",
+        "website",
+    ],
     "data": [
         "views/stock_mobile_views.xml",
         "views/hello_world_template.xml",
+        "views/remove_website_odoo_logo.xml",
         "security/ir.model.access.csv",
     ],
     "assets": {
         "web.assets_frontend": [
-            # We include static JS/CSS via template <script> tag; keeping simple
+            "stockmobilescanner/static/src/css/mobile_scanner.css",
+            "stockmobilescanner/static/src/js/mobile_scanner.js"
+        ],
+        "website.assets_frontend": [
+            "stockmobilescanner/static/src/css/mobile_scanner.css",
+            "stockmobilescanner/static/src/js/mobile_scanner.js"
         ]
     },
     "installable": True,
