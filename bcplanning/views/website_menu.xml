@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<odoo>
-   <record id="bcplanning_project_website_menu" model="website.menu">
-       <field name="name">Projects</field>
-       <field name="url">/partner/projects</field>
-       <field name="parent_id" ref="website.main_menu"/>
-       <field name="sequence" type="int">1</field>
-   </record>
-</odoo>
