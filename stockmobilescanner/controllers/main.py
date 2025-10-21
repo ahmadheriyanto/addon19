@@ -9,7 +9,7 @@ class MobileWarehouseController(http.Controller):
         # Render the qweb template with a simple mobile UI
         return request.render('stock_mobile_scanner.mobile_warehouse_template', {})
 
-    @http.route(['/mobile_warehouse/api/scan'], type='json', auth='user', methods=['POST'])
+    @http.route(['/mobile_warehouse/api/scan'], type='jsonrpc', auth='user', methods=['POST'])
     def api_scan(self, product_barcode=None, quantity=0.0, lot=None, location_id=None, dest_id=None, partner_id=None, picking_id=None, picking_type_id=None):
         """Create a picking and a stock.move for the scanned product (minimal example).
         Returns JSON with created picking/move ids or an error.
@@ -67,7 +67,7 @@ class MobileWarehouseController(http.Controller):
 
         return {'success': True, 'picking_id': picking.id, 'move_id': move.id}
 
-    @http.route(['/mobile_warehouse/api/complete'], type='json', auth='user', methods=['POST'])
+    @http.route(['/mobile_warehouse/api/complete'], type='jsonrpc', auth='user', methods=['POST'])
     def api_complete(self, move_id=None, qty_done=0.0, lot_name=None):
         """Minimal flow to create a stock.move.line with qty_done and attempt to mark the move/picking as done."""
         env = request.env
