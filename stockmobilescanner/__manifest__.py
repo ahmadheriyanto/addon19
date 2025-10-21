@@ -16,7 +16,6 @@
     "data": [
         "views/stock_mobile_views.xml",
         "views/hello_world_template.xml",
-        "views/remove_website_odoo_logo.xml",
         "security/ir.model.access.csv",
     ],
     "assets": {
