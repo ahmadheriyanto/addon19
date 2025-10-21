@@ -11,7 +11,7 @@
             "stopOnEntry": false,
             "python": "/home/odoo/odoo-dev/19/venv-odoo19/bin/python3",
             "program": "~/odoo-dev/19/odoo/odoo-bin",
-            "args": ["--config","~/odoo-dev/19/config/odoo19.conf"],
+            "args": ["--config","~/odoo-dev/19/config/sli.conf"],
             "console": "integratedTerminal",
         }
     ]
