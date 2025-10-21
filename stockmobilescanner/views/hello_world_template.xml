@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <template id="hello_world_template" name="Stock Mobile Scanner Hello">
+    <t t-call="web.layout">
+      <div class="container py-5">
+        <div class="row justify-content-center">
+          <div class="col-lg-8 text-center">
+            <h1 t-esc="message">Hello World</h1>
+            <p class="lead">This is a simple test page to verify the Stock Mobile Scanner module routes and templates.</p>
+            <p>
+              Test links:
+              <a class="btn btn-primary" href="/mobile_warehouse/hello" role="button">Reload Hello</a>
+            </p>
+            <hr/>
+            <p class="text-muted">If you see this page, the controller and template were loaded correctly.</p>
+          </div>
+        </div>
+      </div>
+    </t>
+  </template>
+</odoo>

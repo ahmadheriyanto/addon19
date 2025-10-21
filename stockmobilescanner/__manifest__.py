@@ -9,7 +9,8 @@
     "depends": ["base", "stock", "product", "web"],
     "data": [
         "views/stock_mobile_views.xml",
-        "security/ir.model.access.csv"
+        "views/hello_world_template.xml",
+        "security/ir.model.access.csv",
     ],
     "assets": {
         "web.assets_frontend": [
