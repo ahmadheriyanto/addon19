@@ -5,7 +5,7 @@
       <div class="container" style="padding: 10px;">
         <h3>Mobile Warehouse Scanner</h3>
         <div id="scanner-ui">
-          <video id="mobile-video" autoplay playsinline style="width:100%; max-height:60vh; background:#000;"></video>
+          <video id="mobile-video" autoplay="autoplay" playsinline="playsinline" style="width:100%; max-height:60vh; background:#000;"></video>
           <canvas id="mobile-canvas" style="display:none;"></canvas>
 
           <div style="margin-top:10px;">
@@ -29,7 +29,6 @@
           </div>
         </div>
 
-        <!-- include the static js and css directly -->
         <script type="text/javascript" src="/stockmobilescanner/static/src/js/mobile_scanner.js"></script>
         <link rel="stylesheet" href="/stockmobilescanner/static/src/css/mobile_scanner.css"/>
       </div>
