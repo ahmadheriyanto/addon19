@@ -7,7 +7,7 @@ class MobileWarehouseController(http.Controller):
     @http.route(['/mobile_warehouse'], type='http', auth='user', website=True)
     def index(self, **kw):
         # Render the qweb template with a simple mobile UI
-        return request.render('stock_mobile_scanner.mobile_warehouse_template', {})
+        return request.render('stockmobilescanner.mobile_warehouse_template', {})
 
     @http.route(['/mobile_warehouse/api/scan'], type='jsonrpc', auth='user', methods=['POST'])
     def api_scan(self, product_barcode=None, quantity=0.0, lot=None, location_id=None, dest_id=None, partner_id=None, picking_id=None, picking_type_id=None):
