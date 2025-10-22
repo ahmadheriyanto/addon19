@@ -1,11 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+  <!-- Mobile Warehouse Scanner template
+       Notes:
+       - This template MUST be served via a website route (auth='user' + website=True).
+       - Assets are pulled with website.assets_frontend so the JS/CSS are only loaded on website pages.
+       - The root element has id="mobile-scanner-root" so the frontend JS can guard initialization
+         and avoid breaking other pages (login/backend).
+  -->
   <template id="mobile_warehouse_template" name="Mobile Warehouse Scanner">
-    <!-- Use website layout so website theme + Bootstrap are available -->
     <t t-call="website.layout">
-      <!-- Ensure website frontend assets are included -->
+      <!-- Include website assets only -->
       <t t-call-assets="website.assets_frontend"/>
-      <div class="o_mobile_scanner_page">
+
+      <!-- Root element used by the JS to detect if it should initialize.
+           Keeps the JS defensive and prevents it from running on unrelated pages. -->
+      <div id="mobile-scanner-root" class="o_mobile_scanner_page">
         <div class="o_mobile_scanner_header">
           <div class="o_mobile_scanner_brand">
             <img src="/logo.png?company=1" alt="logo" class="o_mobile_scanner_logo"/>
@@ -32,16 +41,16 @@
 
               <div class="row g-2 mb-2">
                 <div class="col-5">
-                  <label class="form-label small text-muted">Qty</label>
-                  <input id="qty" type="number" value="1" min="0" step="1" class="form-control form-control-lg"/>
+                  <label class="form-label small text-muted" for="qty">Qty</label>
+                  <input id="qty" name="qty" type="number" value="1" min="0" step="1" class="form-control form-control-lg"/>
                 </div>
                 <div class="col-7">
-                  <label class="form-label small text-muted">Lot / Serial (optional)</label>
-                  <input id="lot" type="text" placeholder="Lot / Serial" class="form-control form-control-lg"/>
+                  <label class="form-label small text-muted" for="lot">Lot / Serial (optional)</label>
+                  <input id="lot" name="lot" type="text" placeholder="Lot / Serial" class="form-control form-control-lg"/>
                 </div>
               </div>
 
-              <div id="scan_feedback" class="o_scan_feedback mb-2 text-wrap"></div>
+              <div id="scan_feedback" class="o_scan_feedback mb-2 text-wrap" aria-live="polite"></div>
 
               <div class="o_recent_info mb-2">
                 <small class="text-muted">Last action</small>
@@ -49,11 +58,13 @@
               </div>
 
               <div class="o_log_area mb-2">
-                <pre id="mobile-log" class="o_mobile_log small"></pre>
+                <pre id="mobile-log" class="o_mobile_log small" aria-live="polite"></pre>
               </div>
             </div>
 
             <div class="o_action_bar d-flex">
+              <!-- Buttons must have ids expected by the JS. The JS should check for the root element
+                   (mobile-scanner-root) and for these ids before attaching listeners. -->
               <button id="btn-toggle" class="btn btn-outline-secondary flex-fill me-1" type="button">Start Camera</button>
               <button id="btn-create" class="btn btn-primary flex-fill me-1" type="button">Create</button>
               <button id="btn-complete" class="btn btn-success flex-fill" type="button">Complete</button>

@@ -19,10 +19,6 @@
         "security/ir.model.access.csv",
     ],
     "assets": {
-        "web.assets_frontend": [
-            "stockmobilescanner/static/src/css/mobile_scanner.css",
-            "stockmobilescanner/static/src/js/mobile_scanner.js"
-        ],
         "website.assets_frontend": [
             "stockmobilescanner/static/src/css/mobile_scanner.css",
             "stockmobilescanner/static/src/js/mobile_scanner.js"
