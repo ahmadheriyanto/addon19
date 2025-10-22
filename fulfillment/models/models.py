@@ -1,9 +1,9 @@
 # from odoo import models, fields, api
 
 
-# class sainslogistik(models.Model):
-#     _name = 'sainslogistik.sainslogistik'
-#     _description = 'sainslogistik.sainslogistik'
+# class fulfillment(models.Model):
+#     _name = 'fulfillment.fulfillment'
+#     _description = 'fulfillment.fulfillment'
 
 #     name = fields.Char()
 #     value = fields.Integer()
