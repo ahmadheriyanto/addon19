@@ -19,9 +19,14 @@
         "security/ir.model.access.csv",
     ],
     "assets": {
-        "website.assets_frontend": [
-            "stockmobilescanner/static/src/css/mobile_scanner.css",
+        # JS is an odoo-module (uses /** @odoo-module **/) so it needs the odoo module loader.
+        # Place the ES-module in web.assets_frontend so the loader is present.
+        "web.assets_frontend": [
             "stockmobilescanner/static/src/js/mobile_scanner.js"
+        ],
+        # Keep CSS in website bundle so it only affects website pages
+        "website.assets_frontend": [
+            "stockmobilescanner/static/src/css/mobile_scanner.css"
         ]
     },
     "installable": True,
