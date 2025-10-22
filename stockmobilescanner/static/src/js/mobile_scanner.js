@@ -4,9 +4,6 @@ import publicWidget from "@web/legacy/js/public/public_widget";
 publicWidget.registry.MobileScanner = publicWidget.Widget.extend({
   selector: "#mobile-scanner-root",
 
-  /**
-   * Lifecycle: start
-   */
   async start() {
     if (publicWidget.Widget.prototype.start) {
       await publicWidget.Widget.prototype.start.apply(this, arguments);
@@ -65,12 +62,10 @@ publicWidget.registry.MobileScanner = publicWidget.Widget.extend({
 
       this._log('Mobile scanner initialized.');
     } catch (e) {
-      // Protect global scope — do not break the site if widget fails
       console.error('MobileScanner initialization failed', e);
     }
   },
 
-  // teardown
   destroy() {
     try { this._stopCamera(); } catch (e) { console.warn('MobileScanner stop error', e); }
     try {
@@ -100,19 +95,37 @@ publicWidget.registry.MobileScanner = publicWidget.Widget.extend({
     return window.isSecureContext || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
   },
 
-  async _listVideoDevices() {
+  /**
+   * List video devices and populate the select.
+   * If activeDeviceId is provided, mark that option as selected (do not trigger change).
+   */
+  async _listVideoDevices(activeDeviceId = null) {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(d => d.kind === 'videoinput');
+      // preserve user's manual selection if present and userSelectedDeviceId given
+      const userSelected = this.deviceSelect.value || null;
+
+      // Build options without triggering change
       this.deviceSelect.innerHTML = '';
       if (videoDevices.length > 1) {
         videoDevices.forEach((d, idx) => {
           const opt = document.createElement('option');
           opt.value = d.deviceId;
           opt.textContent = d.label || `Camera ${idx + 1}`;
+          // Choose selection priority: activeDeviceId (stream), then user-selected, else leave default
+          if (activeDeviceId && opt.value === activeDeviceId) {
+            opt.selected = true;
+          } else if (!activeDeviceId && userSelected && opt.value === userSelected) {
+            opt.selected = true;
+          }
           this.deviceSelect.appendChild(opt);
         });
         this.deviceSelect.classList.remove('d-none');
+        // set value to activeDeviceId if provided (ensures select shows correct active camera)
+        if (activeDeviceId) {
+          try { this.deviceSelect.value = activeDeviceId; } catch (e) { /* ignore */ }
+        }
       } else {
         this.deviceSelect.classList.add('d-none');
       }
@@ -157,12 +170,18 @@ publicWidget.registry.MobileScanner = publicWidget.Widget.extend({
       return;
     }
 
+    // Try to list devices first to see available device ids; may be empty labels without permission
     await this._listVideoDevices();
 
-    const selectedDeviceId = this.deviceSelect && this.deviceSelect.value ? this.deviceSelect.value : null;
+    // Use the user-selected deviceId if present
+    const selectedDeviceId = (this.deviceSelect && this.deviceSelect.value) ? this.deviceSelect.value : null;
 
     const constraintsCandidates = [];
-    if (selectedDeviceId) constraintsCandidates.push({ video: { deviceId: { exact: selectedDeviceId } }, audio: false });
+    if (selectedDeviceId) {
+      // Strictly prefer deviceId if user selected one
+      constraintsCandidates.push({ video: { deviceId: { exact: selectedDeviceId } }, audio: false });
+    }
+    // fallback to facingMode if no specific device selected or deviceId failed
     constraintsCandidates.push({ video: { facingMode: { ideal: 'environment' } }, audio: false });
     constraintsCandidates.push({ video: true, audio: false });
 
@@ -182,6 +201,7 @@ publicWidget.registry.MobileScanner = publicWidget.Widget.extend({
     }
 
     try {
+      // attach stream
       this.video.srcObject = this.stream;
       this.video.muted = true;
       this.video.setAttribute('playsinline', '');
@@ -191,8 +211,24 @@ publicWidget.registry.MobileScanner = publicWidget.Widget.extend({
       this._setFeedback('Camera ready — scanning…');
       this._log('Camera stream started');
 
-      await this._listVideoDevices();
+      // determine active device id from the active track settings (if available)
+      let activeDeviceId = null;
+      try {
+        const tracks = this.stream.getVideoTracks();
+        if (tracks && tracks.length) {
+          const settings = tracks[0].getSettings && tracks[0].getSettings();
+          if (settings && settings.deviceId) activeDeviceId = settings.deviceId;
+        }
+      } catch (e) {
+        // ignore: some browsers may not expose deviceId in settings
+      }
 
+      // Repopulate device list and mark the active device (if we could read it)
+      await this._listVideoDevices(activeDeviceId || null);
+
+      // If the deviceSelect contains options and user had chosen a device previously, keep it
+      // (the _listVideoDevices implementation already tries to preserve user selection)
+      // Initialize detector
       if ('BarcodeDetector' in window) {
         try {
           const formats = await BarcodeDetector.getSupportedFormats();
@@ -207,6 +243,7 @@ publicWidget.registry.MobileScanner = publicWidget.Widget.extend({
         this._log('No native BarcodeDetector available; jsQR fallback will be used if present.');
       }
 
+      // start detection loop
       this._tick();
     } catch (err) {
       this._handleGetUserMediaError(err);
@@ -289,9 +326,11 @@ publicWidget.registry.MobileScanner = publicWidget.Widget.extend({
   },
 
   _onDeviceChange() {
+    // user explicitly changed the select — restart to apply exact deviceId
     if (this.scanning) {
       this._stopCamera();
-      this._startCamera();
+      // small delay to ensure track stop completes before starting
+      setTimeout(() => this._startCamera(), 150);
     }
   },
 
