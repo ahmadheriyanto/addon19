@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <template id="website_sains_iframe" inherit_id="website.homepage" name="Homepage — Embed via iFrame">
+    <xpath expr="//div[@id='wrap']" position="replace">
+      <div id="wrap" class="oe_structure" style="padding:0;">
+        <iframe
+          src="https://www.sainslogistik.com/"
+          style="width:100%; height:calc(100vh - 80px); border:0; display:block;"
+          sandbox="allow-same-origin allow-forms allow-scripts allow-popups"
+          loading="eager"
+          title="SainsLogistik"
+        ></iframe>
+      </div>
+    </xpath>
+  </template>
+</odoo>
