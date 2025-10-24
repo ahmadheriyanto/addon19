@@ -1,0 +1,26 @@
+<odoo>
+  <!-- Inherit the list view and insert contact_owner after display_name -->
+  <record id="view_product_category_inherited_list_fulfillment" model="ir.ui.view">
+    <field name="name">product.category.list.inherit.fulfillment</field>
+    <field name="model">product.category</field>
+    <field name="inherit_id" ref="product.product_category_list_view"/>
+    <field name="arch" type="xml">
+      <xpath expr="//list/field[@name='display_name']" position="after">
+        <field name="contact_owner"/>
+      </xpath>
+    </field>
+  </record>
+
+  <!-- Inherit the form view and add contact_owner into the "first" group next to parent_id -->
+  <record id="view_product_category_inherited_form_fulfillment" model="ir.ui.view">
+    <field name="name">product.category.form.inherit.fulfillment</field>
+    <field name="model">product.category</field>
+    <field name="inherit_id" ref="product.product_category_form_view"/>
+    <field name="arch" type="xml">
+      <!-- Insert into the existing group named 'first' so layout stays consistent -->
+      <xpath expr="//form//group[@name='first']" position="inside">
+        <field name="contact_owner" class="oe_inline"/>
+      </xpath>
+    </field>
+  </record>
+</odoo>
