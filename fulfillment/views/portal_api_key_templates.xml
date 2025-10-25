@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Independent templates (do NOT inherit or bind to portal default templates) -->
+    <template id="portal_api_key_page" name="Portal API Key Page">
+        <t t-call="website.layout">
+            <main class="container mt-5 mb-5">
+                <div class="row justify-content-center">
+                    <div class="col-lg-8 col-md-10">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h2 class="card-title mb-3">API Keys</h2>
+                                <t t-if="error">
+                                    <div class="alert alert-danger" role="alert">
+                                        <t t-esc="error"/>
+                                    </div>
+                                </t>
+                                <p class="text-muted mb-3">
+                                    Generate an API key for your user account. The key value will be shown only once — copy and store it securely.
+                                </p>
+
+                                <h5>Your keys (metadata)</h5>
+                                <t t-if="keys and len(keys)">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Description</th>
+                                                <th>Scope</th>
+                                                <th>Added On</th>
+                                                <th>Expiration</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="keys" t-as="k">
+                                                <tr>
+                                                    <td><t t-esc="k.name"/></td>
+                                                    <td><t t-esc="k.scope or '—'"/></td>
+                                                    <td><t t-esc="k.create_date"/></td>
+                                                    <td><t t-esc="k.expiration_date or '—'"/></td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </t>
+                                <t t-if="not keys or len(keys) == 0">
+                                    <p class="text-muted">No API keys found for your account.</p>
+                                </t>
+
+                                <hr/>
+
+                                <h5 class="mt-3">Generate new key</h5>
+                                <form action="/my/api_key/generate" method="post" class="mt-2">
+                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                    <div class="mb-3">
+                                        <label for="name" class="form-label">Key description</label>
+                                        <input id="name" name="name" class="form-control" placeholder="e.g. integration-client-1"/>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="scope" class="form-label">Scope (optional)</label>
+                                        <input id="scope" name="scope" class="form-control" placeholder="e.g. incoming_staging"/>
+                                        <div class="form-text">If empty, the key will have no scope restriction. Prefer specifying a limited scope.</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="expiration" class="form-label">Expiration (optional)</label>
+                                        <input id="expiration" name="expiration" class="form-control" placeholder="YYYY-MM-DD hh:mm:ss (leave empty for no expiration)"/>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-primary">Generate API Key</button>
+                                        <a class="btn btn-outline-secondary" href="/">Back</a>
+                                    </div>
+                                </form>
+
+                                <div class="mt-3 text-muted small">
+                                    <p>Note: API keys are as powerful as passwords. If a key is exposed, revoke it immediately from your account settings or ask an administrator to remove it.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </t>
+    </template>
+
+    <template id="portal_api_key_created" name="Portal API Key Created">
+        <t t-call="website.layout">
+            <main class="container mt-5 mb-5">
+                <div class="row justify-content-center">
+                    <div class="col-lg-8 col-md-10">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h2 class="card-title mb-3">API Key generated</h2>
+                                <p class="text-muted mb-3">This is the only time the key value will be shown. Copy and store it securely now.</p>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Description</label>
+                                    <div><strong t-esc="name"/></div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="form-label">API Key</label>
+                                    <pre style="background:#f8f9fa;border-radius:6px;padding:12px;"><code t-esc="generated_key"/></pre>
+                                </div>
+
+                                <div class="mb-3">
+                                    <a class="btn btn-primary" href="/my">Back to account</a>
+                                    <a class="btn btn-outline-secondary" href="/my/api_key">Manage keys</a>
+                                </div>
+
+                                <hr/>
+
+                                <h5>Your keys (metadata)</h5>
+                                <t t-if="keys and len(keys)">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Description</th>
+                                                <th>Scope</th>
+                                                <th>Added On</th>
+                                                <th>Expiration</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="keys" t-as="k">
+                                                <tr>
+                                                    <td><t t-esc="k.name"/></td>
+                                                    <td><t t-esc="k.scope or '—'"/></td>
+                                                    <td><t t-esc="k.create_date"/></td>
+                                                    <td><t t-esc="k.expiration_date or '—'"/></td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </t>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </t>
+    </template>
+</odoo>

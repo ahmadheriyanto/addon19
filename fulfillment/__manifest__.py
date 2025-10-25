@@ -7,13 +7,13 @@
 Long description of module's purpose
     """,
 
-    'author': "My Company",
-    'website': "https://www.yourcompany.com",
+    'author': "Ahmad Heriyanto",
+    'website': "https://www.aplikasierp.online",
 
     # Categories can be used to filter modules in modules listing
     # Check https://github.com/odoo/odoo/blob/15.0/odoo/addons/base/data/ir_module_category_data.xml
     # for the full list
-    'category': 'Uncategorized',
+    'category': 'Inventory',
     'version': '0.1',
 
     # any module necessary for this one to work correctly
@@ -21,15 +21,18 @@ Long description of module's purpose
         'base',
         'product',
         'website',
+        'stock',
     ],
 
     # always loaded
     'data': [
-        # 'security/ir.model.access.csv',
-        'views/views.xml',
-        'views/templates.xml',
+        'security/ir.model.access.csv',
         'views/remove_website_odoo_logo.xml',
         'views/product_category_views.xml',
+        'views/incoming_staging_views.xml',
+        'views/portal_api_key_templates.xml',
+        'views/portal_api_key_shortcut.xml',
+        'views/res_users_apikeys_inherit.xml',
     ],
     # only loaded in demonstration mode
     'demo': [

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- List view for Incoming Staging (Odoo 19: use <list>) -->
+    <record id="view_incoming_staging_list" model="ir.ui.view">
+        <field name="name">incoming_staging.list</field>
+        <field name="model">incoming_staging</field>
+        <field name="arch" type="xml">
+            <list string="Incoming Staging" create="false" edit="false" delete="false">
+                <field name="transaction_no"/>
+                <field name="datetime_string"/>
+                <field name="partner_id"/>
+                <field name="type"/>
+                <field name="status"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form view for Incoming Staging, includes One2many product lines -->
+    <record id="view_incoming_staging_form" model="ir.ui.view">
+        <field name="name">incoming_staging.form</field>
+        <field name="model">incoming_staging</field>
+        <field name="arch" type="xml">
+            <form string="Incoming Staging" create="false" edit="false" delete="false">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="transaction_no" readonly="1"/>
+                            <field name="type"/>
+                            <field name="status"/>
+                        </group>
+                        <group>
+                            <field name="datetime_string"/>
+                            <field name="partner_id"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Products">
+                            <!-- Removed context that referenced active_id (caused access-rights validation error) -->
+                            <field name="products">
+                                <list editable="bottom" string="Product Lines" create="false" edit="false" delete="false">
+                                    <field name="product_no"/>
+                                    <field name="product_nanme"/>
+                                    <field name="product_qty"/>
+                                    <field name="product_uom"/>
+                                    <field name="product_lot"/>
+                                    <field name="product_serial"/>
+                                </list>
+                                <form>
+                                    <sheet>
+                                        <group>
+                                            <field name="product_no"/>
+                                            <field name="product_nanme"/>
+                                            <field name="product_qty"/>
+                                            <field name="product_uom"/>
+                                        </group>
+                                        <group>
+                                            <field name="product_lot"/>
+                                            <field name="product_serial"/>
+                                        </group>
+                                    </sheet>
+                                </form>
+                            </field>
+                        </page>
+                    </notebook>
+
+                    <footer>
+                        <!-- Example button placeholder; remove or change as needed -->
+                        <!-- <button string="Action" type="object" name="action_dummy" class="btn-primary" /> -->
+                    </footer>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- List view for Incoming Staging Product lines -->
+    <record id="view_incoming_staging_product_list" model="ir.ui.view">
+        <field name="name">incoming_staging.product.list</field>
+        <field name="model">incoming_staging_product</field>
+        <field name="arch" type="xml">
+            <list string="Incoming Staging Product" create="false" edit="false" delete="false">
+                <field name="product_no"/>
+                <field name="product_nanme"/>
+                <field name="product_qty"/>
+                <field name="product_uom"/>
+                <field name="product_lot"/>
+                <field name="product_serial"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Action to open Incoming Staging (list,form) -->
+    <record id="action_incoming_staging" model="ir.actions.act_window">
+        <field name="name">Incoming Staging</field>
+        <field name="res_model">incoming_staging</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_incoming_staging_list"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Incoming staging records are imported from your external system via the JSON-RPC API.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu: Fulfillment under Inventory root, and Incoming Staging submenu -->
+    <menuitem id="menu_fulfillment_root"
+              name="Fulfillment"
+              parent="stock.menu_stock_root"
+              sequence="80"/>
+
+    <menuitem id="menu_incoming_staging"
+              name="Incoming Staging"
+              parent="menu_fulfillment_root"
+              action="action_incoming_staging"
+              sequence="10"/>
+</odoo>

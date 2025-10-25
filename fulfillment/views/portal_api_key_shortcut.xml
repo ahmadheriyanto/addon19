@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Insert a shortcut/button on the /my/security page (portal_my_security).
+        This template inherits the portal 'Connection & Security' page so portal users
+        see a convenient "API Keys" button that opens /my/api_key.
+
+        Requirements:
+        - Add 'portal' to your module dependencies so portal templates exist at install time.
+        - Include this XML in your module data and upgrade the module.
+    -->
+    <template id="portal_my_security_api_keys_shortcut" inherit_id="portal.portal_my_security" priority="20">
+        <!-- Place a small API Keys button next to the "Developer API Keys" header.
+             We insert the button right after the H4 inside the section that is shown when
+             debug and allow_api_keys are enabled. If that section does not appear for your
+             instance, the insertion is harmless (no match -> no insertion). -->
+        <xpath expr="//section[@t-if='debug and allow_api_keys']//h4" position="after">
+            <div class="mb-2">
+                <a t-attf-href="/my/api_key" class="btn btn-sm btn-outline-primary o_portal_api_key_shortcut"
+                   role="button" title="Manage your API keys">
+                    <i class="fa fa-key me-1" aria-hidden="true"></i>
+                    API Keys
+                </a>
+            </div>
+        </xpath>
+        <!-- Fallback: also add a small link under the main header so users can find API Keys
+             even if debug/allow_api_keys section is not present. We insert the link after the
+             main page heading block. -->
+        <xpath expr="//div[@class='d-flex gap-2 my-3']/h3" position="after">
+            <div class="mt-2">
+                <a t-attf-href="/my/api_key" class="btn btn-sm btn-outline-secondary o_portal_api_key_shortcut"
+                   role="button" title="API Keys (Manage)">
+                    <i class="fa fa-key me-1" aria-hidden="true"></i>
+                    API Keys
+                </a>
+            </div>
+        </xpath>
+    </template>
+</odoo>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Inherit the core API keys list view to add expiration_date and masked/index columns.
+         Note: we do not expose the plaintext API secret (Odoo stores it hashed). We only show
+         the index prefix and a masked representation.
+    -->
+    <record id="view_apikeys_inherit_fulfillment" model="ir.ui.view">
+        <field name="name">API Keys Listing - Fulfillment</field>
+        <field name="model">res.users.apikeys</field>
+        <field name="inherit_id" ref="base.view_apikeys"/>
+        <field name="arch" type="xml">
+            <!-- insert after create_date column -->
+            <xpath expr="//list/field[@name='create_date']" position="after">
+                <!-- show expiration_date (existing DB field) -->
+                <field name="expiration_date" string="Expiration"/>
+                <!-- read-only helper fields added in our model extension -->
+                <field name="index_prefix" string="Key index" />
+                <field name="masked_key" string="API Key (masked)" />
+            </xpath>
+        </field>
+    </record>
+</odoo>
