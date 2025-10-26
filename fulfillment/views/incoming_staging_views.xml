@@ -23,9 +23,6 @@
             <form string="Incoming Staging" create="false" edit="false" delete="false">
                 <!-- Header: show QR image -->
                 <header>
-                    <!-- Show QR code image in the header. widget="image" provides preview on click. -->
-                    <!-- <field name="qr_image" widget="image" class="o_form_image"/> -->
-                    <!-- You can also add quick status indicators or buttons here -->
                     <div style="float:left; width:128px; height:128px; margin-right:12px;">
                         <field name="qr_image" widget="image" class="o_form_image" />
                     </div>
@@ -43,9 +40,17 @@
                         </group>
                     </group>
 
+                    <div style="clear:both"/>
+                    <group>
+                        <button name="action_create_receive_transfer"
+                                type="object"
+                                string="Create Receipt"
+                                class="btn-primary"
+                                invisible="not (status == 'open' and type == 'inbound')"/>
+                    </group>
+
                     <notebook>
                         <page string="Products">
-                            <!-- Removed context that referenced active_id (caused access-rights validation error) -->
                             <field name="products">
                                 <list editable="bottom" string="Product Lines" create="false" edit="false" delete="false">
                                     <field name="product_no"/>
@@ -73,10 +78,7 @@
                         </page>
                     </notebook>
 
-                    <footer>
-                        <!-- Example button placeholder; remove or change as needed -->
-                        <!-- <button string="Action" type="object" name="action_dummy" class="btn-primary" /> -->
-                    </footer>
+                    <footer/>
                 </sheet>
             </form>
         </field>
@@ -96,6 +98,48 @@
                 <field name="product_serial"/>
             </list>
         </field>
+    </record>
+
+    <!-- Server action: run Create Receipt on selected incoming_staging records,
+         but only process records where status == 'open' and type == 'inbound' -->
+    <record id="action_server_create_receive" model="ir.actions.server">
+        <field name="name">⬇️ Create Receipt from Incoming Staging</field>
+        <field name="model_id" ref="fulfillment.model_incoming_staging"/>
+        <field name="binding_model_id" ref="fulfillment.model_incoming_staging"/>
+        <field name="state">code</field>
+        <field name="code">active_ids = env.context.get('active_ids', []) or []
+records = env['incoming_staging'].browse(active_ids)
+
+# Only process records that are open and inbound
+to_process = records.filtered(lambda r: r.status == 'open' and r.type == 'inbound')
+skipped = records - to_process
+
+results = []
+if to_process:
+    # Run the model method with sudo() to avoid permission issues
+    # The method action_create_receive_transfer returns a list of dicts per record
+    results = to_process.sudo().action_create_receive_transfer()
+
+# Build notification messages
+messages = []
+for r in results:
+    if r.get('picking_id'):
+        messages.append("Staging %s → Picking %s (state=%s)" % (r.get('staging_id'), r.get('picking_id'), r.get('state')))
+    else:
+        messages.append("Staging %s → Error: %s" % (r.get('staging_id'), r.get('error', 'no details')))
+
+for s in skipped:
+    messages.append("Skipped %s (status=%s, type=%s)" % (s.id, s.status, s.type))
+
+# Send a simple notification (best-effort)
+try:
+    env['bus.bus'].sendone(
+        ('res.users', 0),
+        {'type': 'simple_notification', 'title': 'Create Receipt', 'message': "\\n".join(messages) or 'No records processed.'}
+    )
+except Exception:
+    pass
+</field>
     </record>
 
     <!-- Action to open Incoming Staging (list,form) -->

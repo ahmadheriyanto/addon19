@@ -22,6 +22,7 @@ Long description of module's purpose
         'product',
         'website',
         'stock',
+        'uom',
     ],
 
     # always loaded
