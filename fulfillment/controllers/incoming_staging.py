@@ -139,11 +139,11 @@ class IncomingStagingAPI(http.Controller):
             return Response(json.dumps({'error': 'server_error', 'details': str(exc)}),
                             status=500, content_type='application/json;charset=utf-8', headers=headers)
 
-    # # OPTIONS preflight for the API endpoint
-    # @http.route('/api/incoming_staging', type='http', auth='none', methods=['OPTIONS'], csrf=False)
-    # def create_incoming_staging_options(self, **kw):
-    #     headers = _cors_headers()
-    #     return Response('', status=204, headers=headers)
+    # OPTIONS preflight for the API endpoint
+    @http.route('/api/incoming_staging', type='http', auth='none', methods=['OPTIONS'], csrf=False)
+    def create_incoming_staging_options(self, **kw):
+        headers = _cors_headers()
+        return Response('', status=204, headers=headers)
 
     @http.route('/api/incoming_staging/docs', type='http', auth='none', methods=['GET'], cors="*", csrf=False)
     def incoming_staging_docs(self, **kw):
@@ -212,8 +212,8 @@ class IncomingStagingAPI(http.Controller):
         headers = _cors_headers()
         return Response(json.dumps(openapi, indent=2), content_type='application/json;charset=utf-8', status=200, headers=headers)
 
-    # # OPTIONS preflight for the docs endpoint
-    # @http.route('/api/incoming_staging/docs', type='http', auth='none', methods=['OPTIONS'], csrf=False)
-    # def incoming_staging_docs_options(self, **kw):
-    #     headers = _cors_headers()
-    #     return Response('', status=204, headers=headers)
+    # OPTIONS preflight for the docs endpoint
+    @http.route('/api/incoming_staging/docs', type='http', auth='none', methods=['OPTIONS'], csrf=False)
+    def incoming_staging_docs_options(self, **kw):
+        headers = _cors_headers()
+        return Response('', status=204, headers=headers)
