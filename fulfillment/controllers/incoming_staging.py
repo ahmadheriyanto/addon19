@@ -24,7 +24,7 @@ def _cors_headers():
 
 
 class IncomingStagingAPI(http.Controller):
-    @http.route('/api/incoming_staging', type='http', auth='api_key', methods=['POST'], csrf=False)
+    @http.route('/api/incoming_staging', type='http', auth='api_key', methods=['POST'], cors="*", csrf=False)
     def create_incoming_staging(self, **kw):
         """
         Create an incoming_staging record.
@@ -139,13 +139,13 @@ class IncomingStagingAPI(http.Controller):
             return Response(json.dumps({'error': 'server_error', 'details': str(exc)}),
                             status=500, content_type='application/json;charset=utf-8', headers=headers)
 
-    # OPTIONS preflight for the API endpoint
-    @http.route('/api/incoming_staging', type='http', auth='none', methods=['OPTIONS'], csrf=False)
-    def create_incoming_staging_options(self, **kw):
-        headers = _cors_headers()
-        return Response('', status=204, headers=headers)
+    # # OPTIONS preflight for the API endpoint
+    # @http.route('/api/incoming_staging', type='http', auth='none', methods=['OPTIONS'], csrf=False)
+    # def create_incoming_staging_options(self, **kw):
+    #     headers = _cors_headers()
+    #     return Response('', status=204, headers=headers)
 
-    @http.route('/api/incoming_staging/docs', type='http', auth='none', methods=['GET'], csrf=False)
+    @http.route('/api/incoming_staging/docs', type='http', auth='none', methods=['GET'], cors="*", csrf=False)
     def incoming_staging_docs(self, **kw):
         """
         OpenAPI JSON for the endpoint (use with Swagger UI / Postman).
@@ -212,8 +212,8 @@ class IncomingStagingAPI(http.Controller):
         headers = _cors_headers()
         return Response(json.dumps(openapi, indent=2), content_type='application/json;charset=utf-8', status=200, headers=headers)
 
-    # OPTIONS preflight for the docs endpoint
-    @http.route('/api/incoming_staging/docs', type='http', auth='none', methods=['OPTIONS'], csrf=False)
-    def incoming_staging_docs_options(self, **kw):
-        headers = _cors_headers()
-        return Response('', status=204, headers=headers)
+    # # OPTIONS preflight for the docs endpoint
+    # @http.route('/api/incoming_staging/docs', type='http', auth='none', methods=['OPTIONS'], csrf=False)
+    # def incoming_staging_docs_options(self, **kw):
+    #     headers = _cors_headers()
+    #     return Response('', status=204, headers=headers)
