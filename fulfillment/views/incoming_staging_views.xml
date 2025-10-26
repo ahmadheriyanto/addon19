@@ -21,6 +21,15 @@
         <field name="model">incoming_staging</field>
         <field name="arch" type="xml">
             <form string="Incoming Staging" create="false" edit="false" delete="false">
+                <!-- Header: show QR image -->
+                <header>
+                    <!-- Show QR code image in the header. widget="image" provides preview on click. -->
+                    <!-- <field name="qr_image" widget="image" class="o_form_image"/> -->
+                    <!-- You can also add quick status indicators or buttons here -->
+                    <div style="float:left; width:128px; height:128px; margin-right:12px;">
+                        <field name="qr_image" widget="image" class="o_form_image" />
+                    </div>
+                </header>
                 <sheet>
                     <group>
                         <group>
