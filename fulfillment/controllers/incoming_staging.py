@@ -1,132 +1,206 @@
-from odoo import http
-from odoo.http import request, Response
+# -*- coding: utf-8 -*-
+# Controller for Incoming Staging API
+# - Endpoint: POST /api/incoming_staging
+# - Authentication: auth='api_key' (relies on your ir.http._auth_method_api_key extension)
+# - Body: application/json with transaction_no, type, datetime_string, partner (id or email), products[]
+# - Returns: JSON with created record id / errors
+from datetime import datetime
 import json
 import logging
+
+from odoo import http, fields
+from odoo.http import request, Response
 
 _logger = logging.getLogger(__name__)
 
 
-class FulfillmentJSONRPCController(http.Controller):
-    @http.route('/fulfillment/jsonrpc', type='jsonrpc', auth='none', csrf=False, methods=['POST'])
-    def jsonrpc(self, **kw):
+class IncomingStagingAPI(http.Controller):
+    @http.route('/api/incoming_staging', type='http', auth='api_key', methods=['POST'], csrf=False)
+    def create_incoming_staging(self, **kw):
         """
-        JSON-RPC 2.0 endpoint that accepts requests with Content-Type: application/json.
-        Example payload:
+        Create an incoming_staging record.
+
+        Expected JSON body (application/json):
         {
-          "jsonrpc": "2.0",
-          "method": "incoming_staging.create",
-          "params": {
-            "transaction_no": "TX-001",
-            "type": "inbound",
-            "date": "2025-10-25",
-            "partner_id": 3,
-            "status": "open",
-            "products": [
-              {
-                "product_no": "P-001",
-                "product_name": "Example",
-                "product_lot": "LOT-1",
-                "product_serial": "S-1",
-                "product_qty": 10.0,
-                "product_uom": "Unit"
-              }
-            ]
-          },
-          "id": 1
+          "transaction_no": "TRX-001",
+          "type": "inbound",                   # 'inbound' or 'forder'
+          "datetime_string": "2025-10-26T01:13:55",
+          "partner": {"id": 12} OR {"email": "acme@example.com"},
+          "products": [
+            {
+              "product_no": "P001",
+              "product_nanme": "Product One",
+              "product_lot": "LOT-1",
+              "product_serial": "SN-001",
+              "product_qty": 2,
+              "product_uom": "pcs"
+            },
+            ...
+          ]
         }
 
-        Authentication:
-        - Provide header 'X-API-Key' with the same value as system parameter 'fulfillment.api_key'.
-        Notes:
-        - Route uses type='jsonrpc' as requested.
-        - The controller parses raw request body to ensure correct JSON-RPC handling and returns JSON-RPC formatted responses.
+        The endpoint requires a valid API key (Authorization: Bearer <key>).
+        The request is executed with the API-key user's identity (request.env.user).
         """
-        # Read raw body and parse JSON to strictly validate JSON-RPC structure
-        raw = request.httprequest.get_data(as_text=True)
         try:
-            data = json.loads(raw)
+            data = request.httprequest.get_json(force=True)
+        except Exception as e:
+            return Response(json.dumps({'error': 'Invalid JSON body', 'details': str(e)}),
+                            status=400, content_type='application/json;charset=utf-8')
+
+        # Basic required fields validation
+        required = ['transaction_no', 'type', 'datetime_string', 'partner', 'products']
+        for f in required:
+            if f not in data:
+                return Response(json.dumps({'error': f'Missing field: {f}'}),
+                                status=400, content_type='application/json;charset=utf-8')
+
+        # Validate type
+        if data['type'] not in ('inbound', 'forder'):
+            return Response(json.dumps({'error': "Invalid 'type' value. Expected 'inbound' or 'forder'."}),
+                            status=400, content_type='application/json;charset=utf-8')
+
+        # Validate datetime format (ISO-like expected)
+        try:
+            # Accept ISO 8601 like 'YYYY-MM-DDTHH:MM:SS' (with or without timezone)
+            datetime.fromisoformat(data['datetime_string'])
         except Exception:
-            return {
-                "jsonrpc": "2.0",
-                "error": {"code": -32700, "message": "Parse error: invalid JSON"},
-                "id": None,
-            }
+            return Response(json.dumps({'error': "Invalid 'datetime_string'. Expected ISO format like 2025-10-26T01:13:55"}),
+                            status=400, content_type='application/json;charset=utf-8')
 
-        # Basic JSON-RPC validation
-        if not isinstance(data, dict) or data.get("jsonrpc") != "2.0" or "method" not in data:
-            return {
-                "jsonrpc": "2.0",
-                "error": {"code": -32600, "message": "Invalid Request"},
-                "id": data.get("id") if isinstance(data, dict) else None,
-            }
+        # Resolve partner: allow { "id": <int> } or { "email": "<email>" }
+        partner_id = None
+        partner_val = data.get('partner') or {}
+        partner_model = request.env['res.partner'].sudo()
+        if isinstance(partner_val, dict) and partner_val.get('id'):
+            partner = partner_model.search([('id', '=', int(partner_val.get('id')) )], limit=1)
+            if not partner:
+                return Response(json.dumps({'error': 'partner id not found'}),
+                                status=400, content_type='application/json;charset=utf-8')
+            partner_id = partner.id
+        elif isinstance(partner_val, dict) and partner_val.get('email'):
+            partner = partner_model.search([('email', '=', partner_val.get('email'))], limit=1)
+            if not partner:
+                return Response(json.dumps({'error': 'partner email not found'}),
+                                status=400, content_type='application/json;charset=utf-8')
+            partner_id = partner.id
+        else:
+            return Response(json.dumps({'error': 'partner must be an object with id or email'}),
+                            status=400, content_type='application/json;charset=utf-8')
 
-        # API key check (header preferred)
-        api_key_header = request.httprequest.headers.get("X-API-Key")
-        api_key_param = (data.get("params") or {}).get("api_key")
-        api_key_supplied = api_key_header or api_key_param
-        configured_key = request.env["ir.config_parameter"].sudo().get_param("fulfillment.api_key")
-        if not configured_key or api_key_supplied != configured_key:
-            return {
-                "jsonrpc": "2.0",
-                "error": {"code": 401, "message": "Unauthorized: invalid or missing API key"},
-                "id": data.get("id"),
-            }
+        # Build product lines
+        products = data.get('products') or []
+        if not isinstance(products, list) or len(products) == 0:
+            return Response(json.dumps({'error': 'products must be a non-empty array'}),
+                            status=400, content_type='application/json;charset=utf-8')
 
-        method = data.get("method")
-        params = data.get("params", {}) or {}
+        product_lines = []
+        for idx, p in enumerate(products, start=1):
+            # allow missing optional fields, but validate qty numeric
+            try:
+                qty = float(p.get('product_qty') or 0)
+            except Exception:
+                return Response(json.dumps({'error': f'product at index {idx} has invalid product_qty'}),
+                                status=400, content_type='application/json;charset=utf-8')
 
-        # Only support incoming_staging.create for now
-        if method != "incoming_staging.create":
-            return {
-                "jsonrpc": "2.0",
-                "error": {"code": -32601, "message": "Method not found"},
-                "id": data.get("id"),
-            }
+            product_lines.append({
+                'product_no': p.get('product_no') or '',
+                'product_nanme': p.get('product_nanme') or '',
+                'product_lot': p.get('product_lot') or '',
+                'product_serial': p.get('product_serial') or '',
+                'product_qty': qty,
+                'product_uom': p.get('product_uom') or '',
+            })
 
-        # Required params validation
-        transaction_no = params.get("transaction_no")
-        partner_id = params.get("partner_id")
-        if not transaction_no or not partner_id:
-            return {
-                "jsonrpc": "2.0",
-                "error": {
-                    "code": -32602,
-                    "message": "Invalid params: 'transaction_no' and 'partner_id' are required",
-                },
-                "id": data.get("id"),
-            }
-
-        # Prepare values and create records using sudo so external systems can write
-        staging_vals = {
-            "transaction_no": transaction_no,
-            "type": params.get("type", ""),
-            "date": params.get("date"),
-            "partner_id": partner_id,
-            "status": params.get("status", "open"),
+        # Prepare values for create
+        vals = {
+            'transaction_no': data['transaction_no'],
+            'type': data['type'],
+            'datetime_string': data['datetime_string'],
+            'partner_id': partner_id,
+            'products': [(0, 0, pl) for pl in product_lines],
+            'status': 'open',
         }
 
+        # Create record as the authenticated API user (RBAC applies)
         try:
-            staging = request.env["incoming_staging"].sudo().create(staging_vals)
-
-            products = params.get("products", []) or []
-            for p in products:
-                product_vals = {
-                    "incoming_staging_id": staging.id,
-                    "product_no": p.get("product_no"),
-                    # accept either product_name or legacy product_nanme
-                    "product_nanme": p.get("product_name") or p.get("product_nanme"),
-                    "product_lot": p.get("product_lot"),
-                    "product_serial": p.get("product_serial"),
-                    "product_qty": p.get("product_qty") or 0.0,
-                    "product_uom": p.get("product_uom"),
-                }
-                request.env["incoming_staging_product"].sudo().create(product_vals)
-
-            return {"jsonrpc": "2.0", "result": {"id": staging.id}, "id": data.get("id")}
-        except Exception as e:
-            _logger.exception("Error creating incoming_staging via JSON-RPC")
-            return {
-                "jsonrpc": "2.0",
-                "error": {"code": 500, "message": "Server error: %s" % str(e)},
-                "id": data.get("id"),
+            staging_model = request.env['incoming_staging'].with_user(request.env.user.id)
+            # Use sudo() only if you intentionally want to bypass access rules; here we respect user rights.
+            record = staging_model.create(vals)
+            res = {
+                'id': record.id,
+                'transaction_no': record.transaction_no,
+                'message': 'created',
             }
+            return Response(json.dumps(res), status=201, content_type='application/json;charset=utf-8')
+        except Exception as exc:
+            _logger.exception("Failed to create incoming_staging from API user %s", request.env.user.id)
+            return Response(json.dumps({'error': 'server_error', 'details': str(exc)}),
+                            status=500, content_type='application/json;charset=utf-8')
+
+    @http.route('/api/incoming_staging/docs', type='http', auth='none', methods=['GET'], csrf=False)
+    def incoming_staging_docs(self, **kw):
+        """
+        Simple OpenAPI-like JSON description to inspect the expected payload (useful for Swagger/Postman).
+        Publicly accessible (auth='none') so integrators can fetch the schema. Remove or protect if you prefer.
+        """
+        openapi = {
+            "openapi": "3.0.0",
+            "info": {"title": "Incoming Staging API", "version": "1.0.0"},
+            "paths": {
+                "/api/incoming_staging": {
+                    "post": {
+                        "summary": "Create incoming staging",
+                        "security": [{"bearerAuth": []}],
+                        "requestBody": {
+                            "required": True,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "required": ["transaction_no", "type", "datetime_string", "partner", "products"],
+                                        "properties": {
+                                            "transaction_no": {"type": "string"},
+                                            "type": {"enum": ["inbound", "forder"]},
+                                            "datetime_string": {"type": "string", "format": "date-time"},
+                                            "partner": {
+                                                "oneOf": [
+                                                    {"type": "object", "properties": {"id": {"type": "integer"}}},
+                                                    {"type": "object", "properties": {"email": {"type": "string"}}}
+                                                ]
+                                            },
+                                            "products": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "product_no": {"type": "string"},
+                                                        "product_nanme": {"type": "string"},
+                                                        "product_lot": {"type": "string"},
+                                                        "product_serial": {"type": "string"},
+                                                        "product_qty": {"type": "number"},
+                                                        "product_uom": {"type": "string"}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "201": {"description": "Created", "content": {"application/json": {}}},
+                            "400": {"description": "Bad Request"},
+                            "401": {"description": "Unauthorized"},
+                            "500": {"description": "Server Error"}
+                        }
+                    }
+                }
+            },
+            "components": {
+                "securitySchemes": {
+                    "bearerAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "API key"}
+                }
+            }
+        }
+        return Response(json.dumps(openapi, indent=2), content_type='application/json;charset=utf-8', status=200)
