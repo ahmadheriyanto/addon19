@@ -6,6 +6,7 @@ import logging
 
 from odoo import http, fields
 from odoo.http import request, Response
+from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
 
@@ -74,6 +75,7 @@ class IncomingStagingAPI(http.Controller):
             )
 
         # Resolve partner (id or email)
+        partner = False
         partner_id = None
         partner_val = data.get('partner') or {}
         partner_model = request.env['res.partner'].sudo()
@@ -91,6 +93,13 @@ class IncomingStagingAPI(http.Controller):
             partner_id = partner.id
         else:
             return Response(json.dumps({'error': 'partner must be an object with id or email'}),
+                            status=400, content_type='application/json;charset=utf-8', headers=headers)
+
+        # Check user is member of partner
+        user = request.env.user
+        user_partner = partner_model.search([('id', '=', user.partner_id.id )], limit=1)
+        if user_partner.parent_id.id != partner_id:
+            return Response(json.dumps({'error': f'user {user.name} is not contact member of company {partner.name}'}),
                             status=400, content_type='application/json;charset=utf-8', headers=headers)
 
         # Validate products array and build lines
@@ -125,17 +134,22 @@ class IncomingStagingAPI(http.Controller):
             'status': 'open',
         }
 
+        staging_model = request.env['incoming_staging'].with_user(request.env.user.id)
         try:
-            staging_model = request.env['incoming_staging'].with_user(request.env.user.id)
-            record = staging_model.create(vals)
-            res = {
-                'id': record.id,
-                'transaction_no': record.transaction_no,
-                'message': 'created',
-            }
+            with request.env.cr.savepoint():
+                record = staging_model.create(vals)
+            res = {'id': record.id, 'transaction_no': record.transaction_no, 'message': 'created'}
             return Response(json.dumps(res), status=201, content_type='application/json;charset=utf-8', headers=headers)
+        except ValidationError as vex:
+            return Response(json.dumps({'error': 'validation_error', 'details': str(vex)}),
+                            status=400, content_type='application/json;charset=utf-8', headers=headers)
         except Exception as exc:
-            _logger.exception("Failed to create incoming_staging from API user %s", request.env.user.id)
+            # still good to try rollback for unexpected errors
+            try:
+                request.env.cr.rollback()
+            except Exception:
+                _logger.exception("rollback failed")
+            _logger.exception("unexpected error")
             return Response(json.dumps({'error': 'server_error', 'details': str(exc)}),
                             status=500, content_type='application/json;charset=utf-8', headers=headers)
 
