@@ -1,0 +1,26 @@
+<odoo>
+  <record id="view_bcplanning_config_settings" model="ir.ui.view">
+    <field name="name">res.config.settings.view.form.inherit.bcplanning</field>
+    <field name="model">res.config.settings</field>
+    <field name="priority" eval="40"/>
+    <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//form" position="inside">
+        <app data-string="Fulfillment" string="Fulfillment" name="fulfillment">
+          <block title="Default Operation Type" name="operation_type_block">
+            <div class="o_setting_box">
+              <group>
+                <field name="fulfillment_default_operation_type_receipt_id"/>
+              </group>
+            </div>
+            <div class="o_setting_box">
+              <group>
+                <field name="fulfillment_default_operation_type_pick_id"/>
+              </group>
+            </div>
+          </block>
+        </app>
+      </xpath>
+    </field>
+  </record>
+</odoo>

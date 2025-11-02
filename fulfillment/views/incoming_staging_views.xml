@@ -1,16 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- List view for Incoming Staging (Odoo 19: use <list>) -->
+    <!-- List view for Incoming Staging -->
     <record id="view_incoming_staging_list" model="ir.ui.view">
         <field name="name">incoming_staging.list</field>
         <field name="model">incoming_staging</field>
         <field name="arch" type="xml">
-            <list string="Incoming Staging" create="false" edit="false" delete="false">
+            <list string="Incoming Staging" create="true" edit="true" delete="true">
                 <field name="transaction_no"/>
                 <field name="datetime_string"/>
                 <field name="partner_id"/>
                 <field name="type"/>
                 <field name="status"/>
+                <field name="principal_courier"/>
+                <field name="principal_customer_name"/>
+                <field name="principal_customer_address"/>
             </list>
         </field>
     </record>
@@ -20,12 +23,17 @@
         <field name="name">incoming_staging.form</field>
         <field name="model">incoming_staging</field>
         <field name="arch" type="xml">
-            <form string="Incoming Staging" create="false" edit="false" delete="false">
-                <!-- Header: show QR image -->
+            <form string="Incoming Staging">
                 <header>
                     <div style="float:left; width:128px; height:128px; margin-right:12px;">
-                        <field name="qr_image" widget="image" class="o_form_image" />
+                        <field name="qr_image" widget="image" class="o_form_image" options="{'size': [128,128]}" />
                     </div>
+                    <!-- Call the model method directly. This avoids unresolved XML id issues during module load. -->
+                    <button name="action_create_transfer"
+                            type="object"
+                            string="Create Transfer"
+                            class="btn-primary"
+                            invisible="not (status == 'open' and type == 'inbound')"/>
                 </header>
                 <sheet>
                     <group>
@@ -33,6 +41,9 @@
                             <field name="transaction_no" readonly="1"/>
                             <field name="type"/>
                             <field name="status"/>
+                            <field name="principal_courier"/>
+                            <field name="principal_customer_name"/>
+                            <field name="principal_customer_address"/>
                         </group>
                         <group>
                             <field name="datetime_string"/>
@@ -41,24 +52,16 @@
                     </group>
 
                     <div style="clear:both"/>
-                    <group>
-                        <button name="action_create_receive_transfer"
-                                type="object"
-                                string="Create Receipt"
-                                class="btn-primary"
-                                invisible="not (status == 'open' and type == 'inbound')"/>
-                    </group>
-
                     <notebook>
                         <page string="Products">
                             <field name="products">
-                                <list editable="bottom" string="Product Lines" create="false" edit="false" delete="false">
+                                <list editable="bottom" string="Product Lines">
                                     <field name="product_no"/>
                                     <field name="product_nanme"/>
                                     <field name="product_qty"/>
                                     <field name="product_uom"/>
-                                    <field name="product_lot"/>
-                                    <field name="product_serial"/>
+                                    <field name="tracking_type"/>
+                                    <field name="tracking_no"/>
                                 </list>
                                 <form>
                                     <sheet>
@@ -69,17 +72,22 @@
                                             <field name="product_uom"/>
                                         </group>
                                         <group>
-                                            <field name="product_lot"/>
-                                            <field name="product_serial"/>
+                                            <field name="tracking_type"/>
+                                            <field name="tracking_no"/>
                                         </group>
                                     </sheet>
                                 </form>
                             </field>
                         </page>
+                        <page string="Debug / QR">
+                            <group>
+                                <label for="qr_payload" string="QR Payload (read-only)"/>
+                                <field name="qr_payload" readonly="1" nolabel="1" widget="text"/>
+                            </group>
+                        </page>
                     </notebook>
-
-                    <footer/>
                 </sheet>
+                <footer/>
             </form>
         </field>
     </record>
@@ -89,57 +97,68 @@
         <field name="name">incoming_staging.product.list</field>
         <field name="model">incoming_staging_product</field>
         <field name="arch" type="xml">
-            <list string="Incoming Staging Product" create="false" edit="false" delete="false">
+            <list string="Incoming Staging Product" create="true" edit="true" delete="true">
                 <field name="product_no"/>
                 <field name="product_nanme"/>
                 <field name="product_qty"/>
                 <field name="product_uom"/>
-                <field name="product_lot"/>
-                <field name="product_serial"/>
+                <field name="tracking_type"/>
+                <field name="tracking_no"/>
             </list>
         </field>
     </record>
 
-    <!-- Server action: run Create Receipt on selected incoming_staging records,
-         but only process records where status == 'open' and type == 'inbound' -->
-    <record id="action_server_create_receive" model="ir.actions.server">
-        <field name="name">⬇️ Create Receipt from Incoming Staging</field>
+    <!-- Server action: run Create Transfer on selected incoming_staging records
+         and send a notification to the current user via the bus (no top-level return). -->
+    <record id="action_server_create_transfer" model="ir.actions.server">
+        <field name="name">⬇️ Create Transfer from Incoming Staging</field>
         <field name="model_id" ref="fulfillment.model_incoming_staging"/>
         <field name="binding_model_id" ref="fulfillment.model_incoming_staging"/>
         <field name="state">code</field>
         <field name="code">active_ids = env.context.get('active_ids', []) or []
 records = env['incoming_staging'].browse(active_ids)
-
-# Only process records that are open and inbound
-to_process = records.filtered(lambda r: r.status == 'open' and r.type == 'inbound')
+# Process any open records (both inbound and forder)
+to_process = records.filtered(lambda r: r.status == 'open')
 skipped = records - to_process
-
+messages = []
 results = []
 if to_process:
-    # Run the model method with sudo() to avoid permission issues
-    # The method action_create_receive_transfer returns a list of dicts per record
-    results = to_process.sudo().action_create_receive_transfer()
-
-# Build notification messages
-messages = []
+    try:
+        # action_create_transfer dispatches to receive/pick as appropriate
+        results = to_process.sudo().action_create_transfer()
+    except Exception as e:
+        results = []
+        messages.append("Error when creating transfers: %s" % (str(e),))
+# Build human friendly messages from results + skipped
 for r in results:
-    if r.get('picking_id'):
-        messages.append("Staging %s → Picking %s (state=%s)" % (r.get('staging_id'), r.get('picking_id'), r.get('state')))
+    if isinstance(r, dict):
+        if r.get('picking_id'):
+            messages.append("Staging %s → Picking %s (state=%s)" % (r.get('staging_id'), r.get('picking_id'), r.get('state')))
+        else:
+            messages.append("Staging %s → Error: %s" % (r.get('staging_id'), r.get('error', 'no details')))
     else:
-        messages.append("Staging %s → Error: %s" % (r.get('staging_id'), r.get('error', 'no details')))
-
+        messages.append(str(r))
 for s in skipped:
     messages.append("Skipped %s (status=%s, type=%s)" % (s.id, s.status, s.type))
 
-# Send a simple notification (best-effort)
+msg = "\\n".join(messages) or "No records processed."
+
+# Prefer sending notification to current user (env.uid) — more reliable in typical setups.
 try:
     env['bus.bus'].sendone(
-        ('res.users', 0),
-        {'type': 'simple_notification', 'title': 'Create Receipt', 'message': "\\n".join(messages) or 'No records processed.'}
+        ('res.users', env.uid),
+        {'type': 'simple_notification', 'title': 'Create Transfer', 'message': msg, 'sticky': True}
     )
 except Exception:
-    pass
-</field>
+    # Fallback to broadcast if sending to env.uid fails
+    try:
+        env['bus.bus'].sendone(
+            ('res.users', 0),
+            {'type': 'simple_notification', 'title': 'Create Transfer', 'message': msg, 'sticky': True}
+        )
+    except Exception:
+        # swallow errors to avoid breaking the server action
+        pass</field>
     </record>
 
     <!-- Action to open Incoming Staging (list,form) -->

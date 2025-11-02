@@ -29,7 +29,6 @@ class IncomingStagingAPI(http.Controller):
     def create_incoming_staging(self, **kw):
         """
         Create an incoming_staging record.
-        Auth: Authorization: Bearer <API_KEY> (relies on your ir.http._auth_method_api_key)
 
         Expected JSON (application/json):
         {
@@ -37,7 +36,11 @@ class IncomingStagingAPI(http.Controller):
           "type": "inbound" | "forder",
           "datetime_string": "YYYY-MM-DDTHH:MM:SS",
           "partner": {"id":123} OR {"email":"x@x.com"},
-          "products": [{...}, ...]
+          "products": [ ... ],
+          # The following fields are REQUIRED when type == "forder":
+          "principal_courier": "Courier Name",
+          "principal_customer_name": "Customer Name",
+          "principal_customer_address": "Customer Address"
         }
         """
         headers = _cors_headers()
@@ -49,7 +52,7 @@ class IncomingStagingAPI(http.Controller):
                 status=400, content_type='application/json;charset=utf-8', headers=headers
             )
 
-        # Required fields
+        # Required top-level fields (type may be 'inbound' or 'forder')
         required = ['transaction_no', 'type', 'datetime_string', 'partner', 'products']
         for f in required:
             if f not in data:
@@ -74,6 +77,17 @@ class IncomingStagingAPI(http.Controller):
                 status=400, content_type='application/json;charset=utf-8', headers=headers
             )
 
+        # If type == 'forder' then require principal_* fields
+        if data['type'] == 'forder':
+            principal_fields = ['principal_courier', 'principal_customer_name', 'principal_customer_address']
+            for pf in principal_fields:
+                v = data.get(pf)
+                if not v or (isinstance(v, str) and not v.strip()):
+                    return Response(
+                        json.dumps({'error': f"Missing or empty field required for 'forder': {pf}"}),
+                        status=400, content_type='application/json;charset=utf-8', headers=headers
+                    )
+
         # Resolve partner (id or email)
         partner = False
         partner_id = None
@@ -97,8 +111,7 @@ class IncomingStagingAPI(http.Controller):
 
         # Check user is member of partner
         user = request.env.user
-        user_partner = partner_model.search([('id', '=', user.partner_id.id )], limit=1)
-        if user_partner.parent_id.id != partner_id:
+        if not user.partner_id or not user.partner_id.parent_id or user.partner_id.parent_id.id != partner_id:
             return Response(json.dumps({'error': f'user {user.name} is not contact member of company {partner.name}'}),
                             status=400, content_type='application/json;charset=utf-8', headers=headers)
 
@@ -108,23 +121,37 @@ class IncomingStagingAPI(http.Controller):
             return Response(json.dumps({'error': 'products must be a non-empty array'}),
                             status=400, content_type='application/json;charset=utf-8', headers=headers)
 
+        allowed_tracking = ('serial', 'lot', 'none')
         product_lines = []
         for idx, p in enumerate(products, start=1):
+            # product_qty
             try:
                 qty = float(p.get('product_qty') or 0)
             except Exception:
                 return Response(json.dumps({'error': f'product at index {idx} has invalid product_qty'}),
                                 status=400, content_type='application/json;charset=utf-8', headers=headers)
 
+            if qty < 0:
+                return Response(json.dumps({'error': f'product at index {idx} has negative product_qty'}),
+                                status=400, content_type='application/json;charset=utf-8', headers=headers)
+
+            tracking_type = (p.get('tracking_type') or 'none')
+            if tracking_type not in allowed_tracking:
+                return Response(json.dumps({'error': f'product at index {idx} has invalid tracking_type (allowed: serial, lot, none)'}),
+                                status=400, content_type='application/json;charset=utf-8', headers=headers)
+
+            tracking_no = p.get('tracking_no') or ''
+            # note: we do not enforce serial count here; that will be validated later during processing/import.
             product_lines.append({
                 'product_no': p.get('product_no') or '',
                 'product_nanme': p.get('product_nanme') or '',
-                'product_lot': p.get('product_lot') or '',
-                'product_serial': p.get('product_serial') or '',
                 'product_qty': qty,
                 'product_uom': p.get('product_uom') or '',
+                'tracking_type': tracking_type,
+                'tracking_no': tracking_no,
             })
 
+        # Build vals for create; include principal_* only when present (and they are required for 'forder' by earlier check)
         vals = {
             'transaction_no': data['transaction_no'],
             'type': data['type'],
@@ -133,6 +160,12 @@ class IncomingStagingAPI(http.Controller):
             'products': [(0, 0, pl) for pl in product_lines],
             'status': 'open',
         }
+
+        if data['type'] == 'forder':
+            # include the three principal fields (we validated their presence above)
+            vals['principal_courier'] = (data.get('principal_courier') or '').strip()
+            vals['principal_customer_name'] = (data.get('principal_customer_name') or '').strip()
+            vals['principal_customer_address'] = (data.get('principal_customer_address') or '').strip()
 
         staging_model = request.env['incoming_staging'].with_user(request.env.user.id)
         try:
@@ -163,6 +196,10 @@ class IncomingStagingAPI(http.Controller):
     def incoming_staging_docs(self, **kw):
         """
         OpenAPI JSON for the endpoint (use with Swagger UI / Postman).
+
+        Note: product_lot/product_serial fields have been replaced with:
+          - tracking_type: string enum ['none','lot','serial']
+          - tracking_no: string (lot name or serial(s), for multiples use comma/semicolon/newline/pipe)
         """
         openapi = {
             "openapi": "3.0.0",
@@ -196,13 +233,17 @@ class IncomingStagingAPI(http.Controller):
                                                     "properties": {
                                                         "product_no": {"type": "string"},
                                                         "product_nanme": {"type": "string"},
-                                                        "product_lot": {"type": "string"},
-                                                        "product_serial": {"type": "string"},
                                                         "product_qty": {"type": "number"},
-                                                        "product_uom": {"type": "string"}
+                                                        "product_uom": {"type": "string"},
+                                                        "tracking_type": {"type": "string", "enum": ["none", "lot", "serial"]},
+                                                        "tracking_no": {"type": "string", "description": "Lot name or serial identifier(s). For multiple serials, separate by comma/semicolon/newline/pipe."}
                                                     }
                                                 }
-                                            }
+                                            },
+                                            # principal_* fields are required when type == "forder"
+                                            "principal_courier": {"type": "string", "description": "Courier name (required for type='forder')"},
+                                            "principal_customer_name": {"type": "string", "description": "Customer name (required for type='forder')"},
+                                            "principal_customer_address": {"type": "string", "description": "Customer address (required for type='forder')"}
                                         }
                                     }
                                 }

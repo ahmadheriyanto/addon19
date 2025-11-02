@@ -28,6 +28,7 @@ Long description of module's purpose
     # always loaded
     'data': [
         'security/ir.model.access.csv',
+        'views/res_config_settings_views.xml',
         'views/remove_website_odoo_logo.xml',
         'views/product_category_views.xml',
         'views/incoming_staging_views.xml',
@@ -39,7 +40,9 @@ Long description of module's purpose
     'demo': [
         'demo/demo.xml',
     ],
-    
+    'external_dependencies': {
+        'python': ['segno', 'qrcode', 'Pillow'],
+    },    
     "application": True,
     "installable": True,
 }
