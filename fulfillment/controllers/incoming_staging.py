@@ -197,7 +197,7 @@ class IncomingStagingAPI(http.Controller):
         """
         OpenAPI JSON for the endpoint (use with Swagger UI / Postman).
 
-        Note: product_lot/product_serial fields have been replaced with:
+        Note: tracking_type/tracking_no fields have been replaced with:
           - tracking_type: string enum ['none','lot','serial']
           - tracking_no: string (lot name or serial(s), for multiples use comma/semicolon/newline/pipe)
         """

@@ -8,7 +8,7 @@ import io
 
 _logger = logging.getLogger(__name__)
 
-# Try to use segno (pure-python QR generator) first, fall back to qrcode + PIL
+# Try to use segno (pure-python QR generator) first, fall
 try:
     import segno  # pip install segno
     _HAS_SEGNO = True
@@ -93,11 +93,11 @@ class IncomingStaging(models.Model):
         for line in self.products:
             payload['products'].append({
                 'product_no': line.product_no,
-                'product_nanme': line.product_nanme,
-                'product_lot': line.product_lot,
-                'product_serial': line.product_serial,
+                'product_nanme': line.product_nanme,                
                 'product_qty': float(line.product_qty) if line.product_qty is not None else 0.0,
                 'product_uom': line.product_uom,
+                'tracking_type': line.tracking_type,
+                'tracking_no': line.tracking_no,
             })
         return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(',', ':'))
 
@@ -121,29 +121,34 @@ class IncomingStaging(models.Model):
                 _logger.exception("qrcode failed to generate QR")
                 raise
         else:
+            # No generator available - raise so callers can detect & respond
             raise ImportError(
-                "No QR generator available. Install 'segno' (recommended) or 'qrcode[pil]'."
+                "No QR generator available. Install 'segno' (recommended) or 'qrcode[pil]' + 'pillow'."
             )
 
     def _generate_and_save_qr(self):
         """
         Generate QR payload and PNG and write to qr_payload and qr_image.
         Use sudo() to avoid permission problems and ensure binary saved as base64 string.
+        If generation is not possible (missing libs) or fails, raise an exception so callers can handle it.
         """
         for rec in self:
+            payload_text = rec._build_qr_payload()
             try:
-                payload_text = rec._build_qr_payload()
                 png_bytes = rec._generate_qr_png_bytes(payload_text)
-                # Ensure we write a text base64 value (not bytes) and use sudo to avoid rights issues.
-                b64 = base64.b64encode(png_bytes).decode('ascii')
-                rec.sudo().write({
-                    'qr_payload': payload_text,
-                    'qr_image': b64,
-                })
             except ImportError as ie:
-                _logger.warning("QR generation skipped for incoming_staging %s: %s", rec.id or rec.transaction_no, ie)
+                # Library missing — log and re-raise so API/UI callers can react
+                _logger.error("QR generation unavailable for incoming_staging %s: %s", rec.id or rec.transaction_no, ie)
+                raise
             except Exception:
                 _logger.exception("Failed to generate QR for incoming_staging %s", rec.id or rec.transaction_no)
+                raise
+            # Ensure we write a text base64 value (not bytes) and use sudo to avoid rights issues.
+            b64 = base64.b64encode(png_bytes).decode('ascii')
+            rec.sudo().write({
+                'qr_payload': payload_text,
+                'qr_image': b64,
+            })
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -152,8 +157,16 @@ class IncomingStaging(models.Model):
         try:
             # Use sudo() to avoid permission issues when creating attachments
             records.sudo()._generate_and_save_qr()
-        except Exception:
-            _logger.exception("Unexpected error while generating QR after create")
+        except ImportError:
+            # Fail creation if QR libs not installed so caller knows immediately
+            raise ValidationError(
+                "QR generation dependencies are missing on the server. "
+                "Install 'segno' (recommended) or 'qrcode[pil]' and 'pillow', then restart Odoo."
+            )
+        except Exception as e:
+            _logger.exception("Unexpected error while generating QR after create: %s", e)
+            # surface as ValidationError so the controller returns a clear JSON error
+            raise ValidationError(f"QR generation failed: {e}")
         return records
 
     def write(self, vals):
@@ -177,8 +190,15 @@ class IncomingStaging(models.Model):
             try:
                 # Use sudo to avoid access-rights problems saving attachments
                 self.sudo()._generate_and_save_qr()
-            except Exception:
-                _logger.exception("Failed to regenerate QR on write for incoming_staging %s", self.ids)
+            except ImportError:
+                _logger.error("QR generation missing during write for incoming_staging %s", self.ids)
+                raise ValidationError(
+                    "QR generation dependencies are missing on the server. "
+                    "Install 'segno' (recommended) or 'qrcode[pil]' and 'pillow', then restart Odoo."
+                )
+            except Exception as e:
+                _logger.exception("Failed to regenerate QR on write for incoming_staging %s: %s", self.ids, e)
+                raise ValidationError(f"QR regeneration failed: {e}")
 
         return res
 
