@@ -1,4 +1,5 @@
 from . import ir_http
+from . import res_company
 from . import res_config_settings
 from . import incoming_staging
 from . import product_category
