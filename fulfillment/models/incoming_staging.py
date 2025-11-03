@@ -48,12 +48,17 @@ class IncomingStaging(models.Model):
     )
     status = fields.Selection(string="Status",
                               selection=[
-                                  ('open', 'Open'),
-                                  ('inbound', 'Inbound'),
-                                  ('pick', 'Picking'),
-                                  ('pack', 'Packing'),
-                                  ('deliver', 'Deliver')
+                                  ('open', 'Open'),         # Incoming staging belum di buatkan transfer Order
+                                  ('inbound', 'Inbound'),   # Incoming Staging sudah menjadi transfer Order dengan picking type = receipt, belum validate
+                                  ('storage', 'Storage'),   # Incoming Staging sudah menjadi transfer Order dengan picking type = receipt, sudah validate / Done
+                                  ('pick', 'Picking'),      # Incoming Staging sudah menjadi transfer Order dengan picking type = pick, belum validate
+                                  ('pack', 'Packing'),      # Incoming Staging sudah menjadi transfer Order dengan picking type = pick, sudah validate / Done
+                                                            # Incoming Staging sudah menjadi transfer Order dengan picking type = pack, belum validate
+                                  ('deliver', 'Shipping'),  # Incoming Staging sudah menjadi transfer Order dengan picking type = pack, sudah validate / Done
+                                                            # Incoming Staging sudah menjadi transfer Order dengan picking type = Delivery Order, belum validate
+                                  ('finish', 'Finish')      # Incoming Staging sudah menjadi transfer Order dengan picking type = Delivery Order, sudah validate / Done
                               ], default='open', required=True)
+
     partner_id = fields.Many2one(
         comodel_name='res.partner',
         string="Partner",
