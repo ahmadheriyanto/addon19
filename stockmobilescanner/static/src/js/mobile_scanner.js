@@ -1,6 +1,10 @@
+/** @odoo-module **/
+import { rpc } from "@web/core/network/rpc";
+
 // mobile_scanner.js
 // Live camera QR scanning for the Mobile Warehouse Scanner page.
-// Uses BarcodeDetector when available (fast native path), falls back to jsQR if loaded.
+// Uses BarcodeDetector when available, falls back to jsQR.
+// Uses Odoo rpc(...) helper imported from @web/core/network/rpc for Odoo 19.
 (function () {
   'use strict';
 
@@ -77,19 +81,32 @@
     function setResult(text) {
       if (!resultArea) return;
       resultArea.innerHTML = '<pre style="white-space:pre-wrap;">' + (text ? text : '<em>No scan yet</em>') + '</pre>';
-      // Optionally you may also trigger further UI actions here
-      // Keep same UI contract as scan_from_file.js
     }
 
     // Try to initialize BarcodeDetector if available
     if (window.BarcodeDetector) {
       try {
-        var supported = BarcodeDetector.getSupportedFormats ? BarcodeDetector.getSupportedFormats() : null;
-        // prefer QR format
         bd = new BarcodeDetector({ formats: ['qr_code'] });
       } catch (e) {
         bd = null;
       }
+    }
+
+    function rpcPostPayload(parsedPayload) {
+      // Use imported rpc helper
+      try {
+        if (typeof rpc !== 'function') {
+          throw new Error('rpc helper is not available in this environment');
+        }
+      } catch (e) {
+        showStatus('RPC helper unavailable: ' + e.message, 'alert-danger');
+        console.error(e);
+        return Promise.reject(e);
+      }
+
+      return rpc('/mobile_warehouse/api/process_incoming_qr', {
+        payload: parsedPayload
+      });
     }
 
     async function startCamera() {
@@ -135,11 +152,9 @@
     async function tick() {
       if (!scanning) return;
       if (video.readyState === video.HAVE_ENOUGH_DATA && ctx) {
-        // scale video frame into canvas
         var w = video.videoWidth;
         var h = video.videoHeight;
         if (w && h) {
-          // limit max dims to avoid huge canvases
           var maxDim = 1280;
           if (Math.max(w, h) > maxDim) {
             var scale = maxDim / Math.max(w, h);
@@ -151,7 +166,6 @@
           ctx.drawImage(video, 0, 0, w, h);
 
           try {
-            // Prefer native BarcodeDetector if available
             if (bd) {
               try {
                 const detections = await bd.detect(canvas);
@@ -159,16 +173,14 @@
                   const d = detections[0];
                   if (d && d.rawValue) {
                     onDecoded(d.rawValue);
-                    return; // stop further scans by default (you can continue if you want)
+                    return;
                   }
                 }
               } catch (err) {
-                // ignore barcode detector runtime errors and fallback
                 bd = null;
               }
             }
 
-            // Fallback to jsQR if provided
             if (typeof jsQR === 'function') {
               var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
               var code = jsQR(imageData.data, imageData.width, imageData.height);
@@ -178,7 +190,6 @@
               }
             }
           } catch (err) {
-            // ignore decoding errors
             console.error('Decoding error', err);
           }
         }
@@ -187,13 +198,48 @@
     }
 
     function onDecoded(text) {
-      // Found a code
       showStatus('QR code detected', 'alert-success');
       setResult(text);
-      // Optionally stop scanning after detection
-      // stopCamera();
 
-      // If you want to continue scanning and update result live, comment out stopCamera()
+      try {
+        var parsed = JSON.parse(text);
+        if (parsed && parsed.qr_type === 'incomingstaging') {
+          showStatus('Processing incoming staging QR...', 'alert-info');
+
+          rpcPostPayload(parsed).then(function (result) {
+            // user pattern: result.result === 'updated'
+            if (result && result.result && result.result === 'updated') {
+              showStatus('Processing complete', 'alert-success');
+              setResult('updated');
+              return;
+            }
+            var payload = result;
+            if (payload && payload.success) {
+              setResult(JSON.stringify(payload.results || payload, null, 2));
+              showStatus('Processing complete', 'alert-success');
+              return;
+            }
+            var msg = (payload && (payload.error || payload.details)) ? (payload.error || payload.details) : 'Processing failed (unknown server response)';
+            showStatus(msg, 'alert-danger');
+            console.error('RPC returned unexpected payload:', result);
+          }).catch(function (err) {
+            console.error('RPC error:', err);
+            var userMsg = 'Processing failed (network or permissions).';
+            try {
+              if (err && err.data && err.data.message) {
+                userMsg = err.data.message;
+              } else if (err && err.data && err.data.debug && typeof err.data.debug === 'string') {
+                userMsg = err.data.debug.split('\n')[0];
+              } else if (err && err.message) {
+                userMsg = err.message;
+              }
+            } catch (e) {}
+            showStatus(userMsg, 'alert-danger');
+          });
+        }
+      } catch (e) {
+        // not JSON — ignore
+      }
     }
 
     // Attach events
