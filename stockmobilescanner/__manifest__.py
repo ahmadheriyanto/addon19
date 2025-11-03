@@ -23,7 +23,8 @@
         # JS is an odoo-module (uses /** @odoo-module **/) so it needs the odoo module loader.
         # Place the ES-module in web.assets_frontend so the loader is present.
         "web.assets_frontend": [
-            "stockmobilescanner/static/src/js/mobile_scanner.js"
+            "stockmobilescanner/static/src/js/mobile_scanner.js",
+            "stockmobilescanner/static/src/js/scan_from_file.js"
         ],
         # Keep CSS in website bundle so it only affects website pages
         "website.assets_frontend": [

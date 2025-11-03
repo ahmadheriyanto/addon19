@@ -1,77 +1,63 @@
-<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <!-- Mobile Warehouse Scanner template
-       Notes:
-       - This template MUST be served via a website route (auth='user' + website=True).
-       - Assets are pulled with website.assets_frontend so the JS/CSS are only loaded on website pages.
-       - The root element has id="mobile-scanner-root" so the frontend JS can guard initialization
-         and avoid breaking other pages (login/backend).
-  -->
+  <!-- KEEP template ID exactly as requested -->
   <template id="mobile_warehouse_template" name="Mobile Warehouse Scanner">
     <t t-call="website.layout">
-      <!-- Include website assets only -->
-      <t t-call-assets="website.assets_frontend"/>
-
-      <!-- Root element used by the JS to detect if it should initialize.
-           Keeps the JS defensive and prevents it from running on unrelated pages. -->
-      <div id="mobile-scanner-root" class="o_mobile_scanner_page">
-        <div class="o_mobile_scanner_header">
-          <div class="o_mobile_scanner_brand">
-            <img src="/logo.png?company=1" alt="logo" class="o_mobile_scanner_logo"/>
-            <h1>Mobile Scanner</h1>
+      <div class="container mt-4">
+        <div class="row">
+          <div class="col-12">
+            <h1>Mobile QR Scanner</h1>
+            <p class="text-muted">Use your camera (if supported) or choose an image file from your phone to scan a QR code.</p>
           </div>
-          <div class="o_mobile_scanner_status">Logged as <span t-esc="request.env.user.name"/></div>
         </div>
 
-        <main class="o_mobile_scanner_main container-fluid">
-          <div class="o_scanner_card card shadow-sm">
-            <div class="o_video_wrap">
-              <video id="mobile-video" autoplay="autoplay" playsinline="playsinline" muted="muted" class="o_video"></video>
-              <canvas id="mobile-canvas" class="d-none"></canvas>
-              <div id="camera_overlay" class="o_camera_overlay">
-                <div class="o_overlay_border"></div>
+        <div class="row">
+          <div class="col-md-6">
+            <!-- Camera-based scanner UI -->
+            <div id="camera-scanner-holder" class="mb-3">
+              <!-- mobile_scanner.js will populate this area with video and controls -->
+              <noscript>
+                <div class="alert alert-warning">Camera scanning requires JavaScript.</div>
+              </noscript>
+            </div>
+
+            <!-- File-based QR scan UI (unchanged) -->
+            <div class="card">
+              <div class="card-body">
+                <h5 class="card-title">Scan QR from image file</h5>
+                <div class="mb-2">
+                  <input id="qr_file_input" type="file" accept="image/*" class="form-control" />
+                </div>
+                <div class="mb-2">
+                  <button id="scan_file_btn" class="btn btn-primary">Scan from file</button>
+                  <button id="clear_file_btn" class="btn btn-secondary ms-2" type="button">Clear</button>
+                </div>
+                <div id="qr_status" class="mt-3"></div>
+                <canvas id="qr_canvas" style="display:none; max-width:100%;"></canvas>
               </div>
             </div>
 
-            <div class="o_scanner_body p-3">
-              <div class="form-group mb-2">
-                <label for="scanned-barcode" class="form-label small text-muted">Scanned code</label>
-                <input id="scanned-barcode" class="form-control form-control-lg" type="text" placeholder="Waiting for scan..." readonly="readonly"/>
-              </div>
+          </div>
 
-              <div class="row g-2 mb-2">
-                <div class="col-5">
-                  <label class="form-label small text-muted" for="qty">Qty</label>
-                  <input id="qty" name="qty" type="number" value="1" min="0" step="1" class="form-control form-control-lg"/>
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-body">
+                <h5 class="card-title">Decoded result</h5>
+                <div id="qr_result_area" class="small text-wrap">
+                  <em>No scan yet</em>
                 </div>
-                <div class="col-7">
-                  <label class="form-label small text-muted" for="lot">Lot / Serial (optional)</label>
-                  <input id="lot" name="lot" type="text" placeholder="Lot / Serial" class="form-control form-control-lg"/>
-                </div>
+                <div id="qr_actions" class="mt-3"></div>
               </div>
-
-              <div id="scan_feedback" class="o_scan_feedback mb-2 text-wrap" aria-live="polite"></div>
-
-              <div class="o_recent_info mb-2">
-                <small class="text-muted">Last action</small>
-                <div id="last_action" class="o_last_action">—</div>
-              </div>
-
-              <div class="o_log_area mb-2">
-                <pre id="mobile-log" class="o_mobile_log small" aria-live="polite"></pre>
-              </div>
-            </div>
-
-            <div class="o_action_bar d-flex">
-              <!-- Buttons must have ids expected by the JS. The JS should check for the root element
-                   (mobile-scanner-root) and for these ids before attaching listeners. -->
-              <button id="btn-toggle" class="btn btn-outline-secondary flex-fill me-1" type="button">Start Camera</button>
-              <button id="btn-create" class="btn btn-primary flex-fill me-1" type="button">Create</button>
-              <button id="btn-complete" class="btn btn-success flex-fill" type="button">Complete</button>
             </div>
           </div>
-        </main>
+        </div>
       </div>
+
+      <!-- load jsQR (for fallback) -->
+      <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+
+      <!-- load the camera scanner and file-scanner static assets -->
+      <script type="text/javascript" src="/stockmobilescanner/static/src/js/mobile_scanner.js"></script>
+      <script type="text/javascript" src="/stockmobilescanner/static/src/js/scan_from_file.js"></script>
     </t>
   </template>
 </odoo>
