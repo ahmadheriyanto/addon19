@@ -7,11 +7,12 @@
     "license": "LGPL-3",
     "website": "",
     "depends": [
-        "base",
-        "stock",
-        "product",
-        "web",
-        "website",
+        'base',
+        'stock',
+        'product',
+        'web',
+        'website',
+        'fulfillment',
     ],
     "data": [
         "views/stock_mobile_views.xml",

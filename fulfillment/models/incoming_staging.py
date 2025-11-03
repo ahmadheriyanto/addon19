@@ -83,6 +83,7 @@ class IncomingStaging(models.Model):
     def _build_qr_payload(self):
         self.ensure_one()
         payload = {
+            'qr_type': 'incomingstaging',
             'transaction_no': self.transaction_no,
             'type': self.type,
             'datetime_string': self.datetime_string,
