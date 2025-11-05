@@ -38,6 +38,7 @@
     """,
     'depends': [
         'web',
+        'website',
         'app_common',
         'base_setup',
         'base_import',

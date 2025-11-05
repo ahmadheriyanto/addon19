@@ -14,7 +14,7 @@
             </a>
         </xpath>
     </template>
-    <template id="replace_copyright_name" name="Copyright Name" inherit_id="web.frontend_layout">
+    <!-- <template id="replace_copyright_name" name="Copyright Name" inherit_id="web.frontend_layout">
         <xpath expr="//span[hasclass('o_footer_copyright_name')]" position="replace">
             <span class="o_footer_copyright_name me-2">Copyright &amp;copy;
 	            <span class="copyright_name_before" contenteditable="true">2010-2026 </span>
@@ -22,5 +22,6 @@
 	            <span class="copyright_name_after" contenteditable="true"></span>
             </span>
         </xpath>
-    </template>
+    </template> -->
+
 </odoo>
