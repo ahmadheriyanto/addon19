@@ -9,6 +9,7 @@
                 <field name="transaction_no"/>
                 <field name="datetime_string"/>
                 <field name="partner_id"/>
+                <field name="courier_priority"/>
                 <field name="type"/>
                 <field name="status"/>
                 <field name="principal_courier"/>
@@ -48,6 +49,7 @@
                         <group>
                             <field name="datetime_string"/>
                             <field name="partner_id"/>
+                            <field name="courier_priority" readonly="1"/>
                         </group>
                     </group>
 

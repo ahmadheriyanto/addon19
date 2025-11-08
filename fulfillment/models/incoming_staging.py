@@ -68,12 +68,60 @@ class IncomingStaging(models.Model):
     )
 
     principal_courier = fields.Char(string="Courier")
+
+    # 1) Computed Many2one field: find first res.partner whose name ilike principal_courier
+    #    and who belongs to the Transporter category configured on the company settings.
+    principal_courier_id = fields.Many2one(
+        comodel_name='res.partner',
+        string="Courier Id",
+        compute='_compute_principal_courier_id',
+        store=True,
+        readonly=True,
+        index=True,
+        help='Computed: partner record matched by principal_courier name and company Transporter category'
+    )
+
+    # 2) Related field: courier_priority resolves through principal_courier_id -> partner.courier_scoring_label
+    courier_priority = fields.Char(
+        string='Courier priority',
+        related='principal_courier_id.courier_scoring_label',
+        readonly=True,
+        store=True,
+        help='Related from principal_courier_id.courier_scoring_label'
+    )
+
     principal_customer_name = fields.Char(string="Customer Name")
     principal_customer_address = fields.Char(string="Customer Address")
 
     qr_image = fields.Binary("QR Code (PNG)", attachment=True,
                              help="PNG image of QR code representing header + product lines")
     qr_payload = fields.Text("QR Payload (JSON)", help="JSON payload encoded into the QR code", copy=False)
+
+    @api.depends('principal_courier')
+    def _compute_principal_courier_id(self):
+        """
+        For each incoming_staging record:
+          - if principal_courier is set and a company-level Transporter category configured,
+            search res.partner with that category and whose name ilike principal_courier.
+          - assign the first match (limit=1) to principal_courier_id; otherwise set False.
+        Note: we store the computed partner id because downstream logic / views expect stored values.
+        If you change transporter category or partner categories you should run the refresh routine
+        (settings button) to update stored values for existing records.
+        """
+        Partner = self.env['res.partner'].sudo()
+        # resolve transporter category from current company (no company on this model)
+        transporter_cat = self.env.company.fulfillment_transporter_category_id
+        transporter_id = transporter_cat.id if transporter_cat else False
+
+        for rec in self:
+            rec.principal_courier_id = False
+            name = (rec.principal_courier or '').strip()
+            if not name or not transporter_id:
+                continue
+            # search partners that have the transporter category and name matches (ilike)
+            partner = Partner.search([('category_id', 'in', [transporter_id]), ('name', 'ilike', name)], limit=1)
+            if partner:
+                rec.principal_courier_id = partner.id
 
     @api.constrains('transaction_no')
     def _check_name_unique(self):
