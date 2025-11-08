@@ -256,6 +256,10 @@ class IncomingStagingAPI(http.Controller):
             with request.env.cr.savepoint():
                 record = staging_model.create(vals)
             res = {'id': record.id, 'transaction_no': record.transaction_no, 'message': 'created'}
+
+            # Please add code here (GitHUb_Copilot_Request#001)
+            # if type = 'forder' and courier priority = instan (based on setting) then execute incoming_staging.action_create_transfer()
+
             return Response(json.dumps(res), status=201, content_type='application/json;charset=utf-8', headers=headers)
         except ValidationError as vex:
             return Response(json.dumps({'error': 'validation_error', 'details': str(vex)}),

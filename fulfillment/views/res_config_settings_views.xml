@@ -33,6 +33,15 @@
                         class="btn btn-primary o_form_button_refresh"/>
               </group>
             </div>
+            <div class="o_setting_box">
+              <group string="Courier classification">
+                <field name="fulfillment_courier_threshold_reguler"/>
+                <field name="fulfillment_courier_threshold_medium"/>
+                <field name="fulfillment_courier_label_reguler"/>
+                <field name="fulfillment_courier_label_medium"/>
+                <field name="fulfillment_courier_label_priority"/>
+              </group>
+            </div>
           </block>
         </app>
       </xpath>
