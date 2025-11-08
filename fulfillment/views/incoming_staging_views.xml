@@ -8,11 +8,11 @@
             <list string="Incoming Staging" create="true" edit="true" delete="true">
                 <field name="transaction_no"/>
                 <field name="datetime_string"/>
-                <field name="partner_id"/>
-                <field name="courier_priority"/>
+                <field name="partner_id"/>                
                 <field name="type"/>
                 <field name="status"/>
                 <field name="principal_courier"/>
+                <field name="courier_priority"/>
                 <field name="principal_customer_name"/>
                 <field name="principal_customer_address"/>
             </list>
@@ -43,13 +43,13 @@
                             <field name="type"/>
                             <field name="status"/>
                             <field name="principal_courier"/>
+                            <field name="courier_priority" readonly="1"/>
                             <field name="principal_customer_name"/>
                             <field name="principal_customer_address"/>
                         </group>
                         <group>
                             <field name="datetime_string"/>
-                            <field name="partner_id"/>
-                            <field name="courier_priority" readonly="1"/>
+                            <field name="partner_id"/>                            
                         </group>
                     </group>
 

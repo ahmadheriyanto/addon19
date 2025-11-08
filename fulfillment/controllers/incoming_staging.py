@@ -6,7 +6,7 @@ import logging
 
 from odoo import http, fields
 from odoo.http import request, Response
-from odoo.exceptions import ValidationError
+from odoo.exceptions import ValidationError, AccessError
 
 _logger = logging.getLogger(__name__)
 
@@ -77,16 +77,100 @@ class IncomingStagingAPI(http.Controller):
                 status=400, content_type='application/json;charset=utf-8', headers=headers
             )
 
-        # If type == 'forder' then require principal_* fields
+        # # If type == 'forder' then require principal_* fields
+        # if data['type'] == 'forder':
+        #     principal_fields = ['principal_courier', 'principal_customer_name', 'principal_customer_address']
+        #     for pf in principal_fields:
+        #         v = data.get(pf)
+        #         if not v or (isinstance(v, str) and not v.strip()):
+        #             return Response(
+        #                 json.dumps({'error': f"Missing or empty field required for 'forder': {pf}"}),
+        #                 status=400, content_type='application/json;charset=utf-8', headers=headers
+        #             )
+
+        # If type == 'forder' then require principal_* fields and validate courier exists in Transporter category
         if data['type'] == 'forder':
             principal_fields = ['principal_courier', 'principal_customer_name', 'principal_customer_address']
+            try:
+                # Use sudo() to read company setting and partner/category safely regardless of caller permissions.
+                company = request.env.company.sudo()
+                transporter_cat = company.fulfillment_transporter_category_id
+            except AccessError as ae:
+                # If for some reason we cannot read company/category, return a helpful error.
+                _logger.exception("Access error when reading company transporter category: %s", ae)
+                return Response(
+                    json.dumps({
+                        'error': 'access_error_reading_transporter_category',
+                        'details': 'The API user does not have permission to read company transporter settings (res.company / res.partner.category).'
+                                   ' Ask your administrator to grant read access or ensure the endpoint runs with sudo.',
+                    }),
+                    status=403, content_type='application/json;charset=utf-8', headers=headers
+                )
+
+            transporter_info = {
+                'id': transporter_cat.id if transporter_cat else None,
+                'name': transporter_cat.name if transporter_cat else None,
+            }
+
+            # find a sample partner that belongs to the transporter category (no name filter)
+            sample_partner_info = []
+            if transporter_cat:
+                Partner = request.env['res.partner'].sudo()
+                sample_partner = Partner.search([('category_id', 'in', [transporter_cat.id])])
+                for _courier in sample_partner:
+                    # convert sample_partner into a JSON string for inclusion in API error responses
+                    sample_obj = {
+                        # 'id': sample_partner.id,
+                        'name': _courier.name,
+                        # 'email': sample_partner.email or None,
+                        # 'phone': sample_partner.phone or None,
+                    }
+                    sample_partner_info.append(sample_obj)
+            if sample_partner_info:
+                sample_partner_info = json.dumps(sample_partner_info, ensure_ascii=False)
+            else:
+                sample_partner_info = ''
+
             for pf in principal_fields:
                 v = data.get(pf)
                 if not v or (isinstance(v, str) and not v.strip()):
+                    # include transporter info to help callers configure system correctly
                     return Response(
-                        json.dumps({'error': f"Missing or empty field required for 'forder': {pf}"}),
+                        json.dumps({
+                            'error': f"Missing or empty field required for 'forder': {pf}",
+                            'transporter_category': transporter_info,
+                        }),
                         status=400, content_type='application/json;charset=utf-8', headers=headers
                     )
+
+                # additional validation for principal_courier: ensure a partner exists that belongs to the
+                # configured Transporter category and whose name matches (ilike) the provided courier string.
+                if pf == 'principal_courier':
+                    courier_name = (v or '').strip()
+                    if not transporter_cat:
+                        # transporter category not configured -> instruct caller
+                        return Response(
+                            json.dumps({
+                                'error': "Transporter category is not configured in company settings.",
+                                'expected_setting': 'company.fulfillment_transporter_category_id',
+                                'provided_principal_courier': courier_name,
+                            }),
+                            status=400, content_type='application/json;charset=utf-8', headers=headers
+                        )
+                    # search partner (sudo to avoid ACL issues), match by transporter category and name ilike courier_name
+                    Partner = request.env['res.partner'].sudo()
+                    partner = Partner.search([('category_id', 'in', [transporter_cat.id]), ('name', 'ilike', courier_name)], limit=1)
+                    if not partner:
+                        # No matching transporter partner found — return error with transporter category info
+                        return Response(
+                            json.dumps({
+                                'error': "Transporter partner not found for provided principal_courier.",
+                                'provided_principal_courier': courier_name,
+                                'available_transporter': sample_partner_info,
+                                'hint': "Ensure a partner exists with a name matching the courier and is assigned the configured Transporter category."
+                            }),
+                            status=400, content_type='application/json;charset=utf-8', headers=headers
+                        )
 
         # Resolve partner (id or email)
         partner = False
