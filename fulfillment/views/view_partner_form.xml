@@ -1,0 +1,17 @@
+<odoo>
+  <!-- Inherit partner form and place courier fields right after the category field -->
+  <record id="view_partner_form_inherit_fulfillment" model="ir.ui.view">
+    <field name="name">res.partner.form.fulfillment</field>
+    <field name="model">res.partner</field>
+    <field name="inherit_id" ref="base.view_partner_form"/>
+    <field name="arch" type="xml">
+      <!-- find the category field and insert our computed fields after it -->
+      <xpath expr="//field[@name='category_id']" position="after">
+        <!-- show computed integer score (readonly) -->
+        <field name="courier_scoring" readonly="1"/>
+        <!-- show computed label (readonly) -->
+        <field name="courier_scoring_label" readonly="1"/>
+      </xpath>
+    </field>
+  </record>
+</odoo>
