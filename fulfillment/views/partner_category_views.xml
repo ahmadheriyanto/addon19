@@ -1,0 +1,14 @@
+<odoo>
+  <!-- Inherit the base list view for partner categories and add courier_scoring after name -->
+  <record id="view_partner_category_list_inherit_fulfillment" model="ir.ui.view">
+    <field name="name">res.partner.category.list.fulfillment</field>
+    <field name="model">res.partner.category</field>
+    <!-- Adjust module prefix if needed; many base partner category views live in 'base' -->
+    <field name="inherit_id" ref="base.view_partner_category_list"/>
+    <field name="arch" type="xml">
+      <xpath expr="//list//field[@name='name']" position="after">
+        <field name="courier_scoring"/>
+      </xpath>
+    </field>
+  </record>
+</odoo>

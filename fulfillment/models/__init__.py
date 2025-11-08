@@ -5,3 +5,4 @@ from . import incoming_staging
 from . import product_category
 from . import res_users_apikeys
 from . import incoming_to_stock_picking
+from . import res_partner_category

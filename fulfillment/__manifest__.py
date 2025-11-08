@@ -35,6 +35,7 @@ Long description of module's purpose
         'views/portal_api_key_templates.xml',
         'views/portal_api_key_shortcut.xml',
         'views/res_users_apikeys_inherit.xml',
+        'views/partner_category_views.xml',
     ],
     # only loaded in demonstration mode
     'demo': [
