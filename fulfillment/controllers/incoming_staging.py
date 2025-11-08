@@ -259,6 +259,39 @@ class IncomingStagingAPI(http.Controller):
 
             # Please add code here (GitHUb_Copilot_Request#001)
             # if type = 'forder' and courier priority = instan (based on setting) then execute incoming_staging.action_create_transfer()
+            rec = record.sudo()
+            # principal_courier_id is computed/stored on incoming_staging -> res.partner
+            courier_partner = rec.principal_courier_id
+            if courier_partner:
+                # determine company's configured priority label (fallback to 'Instan' if not set)
+                company = rec.partner_id.company_id or request.env.company
+                priority_label = (company.fulfillment_courier_label_priority or 'Instan').strip().lower()
+
+                # partner label (may be stored on partner or computed)
+                partner_label = (courier_partner.courier_scoring_label or '').strip().lower()
+
+                if partner_label and partner_label == priority_label:
+                    _logger.info(
+                        "Auto-creating transfer for incoming_staging %s because courier priority is '%s'",
+                        rec.id, partner_label
+                    )
+                    try:
+                        # action_create_transfer can return a list of results; run as sudo to avoid ACL issues
+                        results = rec.sudo().action_create_transfer()
+                        # include summary in API response for client visibility
+                        res['auto_transfer'] = {
+                            'status': 'ok',
+                            'results': results,
+                        }
+                    except Exception as e:
+                        _logger.exception("Auto create transfer failed for incoming_staging %s: %s", rec.id, e)
+                        res['auto_transfer'] = {
+                            'status': 'error',
+                            'error': str(e),
+                        }
+            else:
+                # Optional: include a hint if no principal_courier_id resolved
+                res.setdefault('auto_transfer', {'status': 'skipped', 'reason': 'no_principal_courier_id'})
 
             return Response(json.dumps(res), status=201, content_type='application/json;charset=utf-8', headers=headers)
         except ValidationError as vex:
