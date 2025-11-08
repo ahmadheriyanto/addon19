@@ -97,3 +97,49 @@ class ResPartner(models.Model):
                 partner.courier_scoring_label = 'Medium'
             else:
                 partner.courier_scoring_label = 'Instan'
+
+    @api.model
+    def refresh_courier_scoring_all(self):
+        """
+        Recompute and write courier_scoring, show_courier_scoring and courier_scoring_label
+        for all partners and persist the stored values.
+        Can be called from a settings button.
+        """
+        Partner = self.sudo()
+        partners = Partner.search([])  # consider limiting scope if you have many partners
+        for p in partners:
+            company = p.company_id or self.env.company
+            transporter_cat = company.fulfillment_transporter_category_id
+            transporter_id = transporter_cat.id if transporter_cat else False
+
+            cats = p.category_id
+            if not cats or not transporter_id:
+                score = 0
+                show = False
+            else:
+                other_sum = sum(int(c.courier_scoring or 0) for c in cats.filtered(lambda c: c.id != transporter_id))
+                has_transporter = transporter_id in cats.ids
+                score = int(other_sum or 0) if has_transporter else 0
+                show = bool(has_transporter)
+
+            # compute label
+            if score <= 0:
+                label = ''
+            elif 1 <= score <= 30:
+                label = 'Reguler'
+            elif 31 <= score <= 70:
+                label = 'Medium'
+            else:
+                label = 'Instan'
+
+            # write only if values changed (optional small optimization)
+            vals = {}
+            if p.courier_scoring != score:
+                vals['courier_scoring'] = score
+            if p.show_courier_scoring != show:
+                vals['show_courier_scoring'] = show
+            if p.courier_scoring_label != label:
+                vals['courier_scoring_label'] = label
+            if vals:
+                p.write(vals)
+        return True

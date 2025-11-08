@@ -25,6 +25,14 @@
                 <field name="fulfillment_transporter_category_id"/>
               </group>
             </div>
+            <div class="o_setting_box">
+              <group>
+                <button name="action_refresh_courier_scoring"
+                        type="object"
+                        string="Refresh"
+                        class="btn btn-primary o_form_button_refresh"/>
+              </group>
+            </div>
           </block>
         </app>
       </xpath>

@@ -27,3 +27,21 @@ class ResConfigSettings(models.TransientModel):
         readonly=False,
         help='Company-level partner category used as the Transporter (special) category for courier scoring.',
     )
+
+    def action_refresh_courier_scoring(self):
+        """
+        Button handler invoked from Settings view. Calls partner method to recompute and write
+        stored courier fields for all partners.
+        """
+        # Run as sudo to ensure writing stored values is allowed
+        self.env['res.partner'].sudo().refresh_courier_scoring_all()
+        # Return a client notification so the user sees the action result
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Refresh Courier Scoring',
+                'message': 'Courier scoring refreshed for all partners.',
+                'sticky': False,
+            },
+        }
