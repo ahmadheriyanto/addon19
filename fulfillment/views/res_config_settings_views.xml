@@ -19,6 +19,13 @@
               </group>
             </div>
           </block>
+          <block title="Transporter Category" name="fulfillment_transporter">
+            <div class="o_setting_box">
+              <group>
+                <field name="fulfillment_transporter_category_id"/>
+              </group>
+            </div>
+          </block>
         </app>
       </xpath>
     </field>

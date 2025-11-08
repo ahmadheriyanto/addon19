@@ -18,3 +18,12 @@ class ResConfigSettings(models.TransientModel):
         readonly=False,
         help="Company-level default operation type for pick",
     )
+
+    # Company-level transporter category exposed in settings for easy configuration
+    fulfillment_transporter_category_id = fields.Many2one(
+        'res.partner.category',
+        related='company_id.fulfillment_transporter_category_id',
+        string='Transporter Category',
+        readonly=False,
+        help='Company-level partner category used as the Transporter (special) category for courier scoring.',
+    )

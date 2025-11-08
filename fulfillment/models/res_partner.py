@@ -9,8 +9,17 @@ class ResPartner(models.Model):
         store=True,
         readonly=True,
         help='Computed scoring coming from partner categories (uses category courier_scoring). '
-             'If partner has category with id Transporter then this is the sum of courier_scoring of categories EXCLUDING id Transporter, '
-             'otherwise 0.',
+             'If partner has the transporter category (configured on company) then this is the sum of courier_scoring of '
+             'categories EXCLUDING the transporter category, otherwise 0.',
+    )
+
+    # Boolean used to control visibility of courier fields in the form view.
+    show_courier_scoring = fields.Boolean(
+        string='Show Courier Scoring Fields',
+        compute='_compute_courier_scoring',
+        store=True,
+        readonly=True,
+        help='Computed: True when partner has the configured transporter category, used to show/hide courier fields in the view.'
     )
 
     courier_scoring_label = fields.Char(
@@ -21,29 +30,60 @@ class ResPartner(models.Model):
         help="Label based on courier_scoring: 'Standar' (0-30), 'Medium' (31-70), 'Priority' (71-100).",
     )
 
-    @api.depends('category_id.courier_scoring', 'category_id')
+    @api.depends('category_id.courier_scoring', 'category_id', 'company_id.fulfillment_transporter_category_id')
     def _compute_courier_scoring(self):
         """
-        Compute courier_scoring according to the rule:
-         - If the partner has a category with id == Transporter, courier_scoring is the SUM of courier_scoring
-           values of the partner's categories excluding the category with id Transporter.
-         - If the partner does NOT have category id == Transporter, courier_scoring is 0.
+        Compute courier_scoring and show_courier_scoring using company-configured transporter category.
+
+        Logic:
+         - Determine the transporter category id from partner.company_id.fulfillment_transporter_category_id or
+           fallback to current environment company (env.company).
+         - If transporter category is configured and partner has that category, courier_scoring = sum of
+           courier_scoring of partner's categories excluding transporter category.
+         - Otherwise courier_scoring = 0.
+         - show_courier_scoring is True iff transporter category is configured and partner has it.
         """
-        SPECIAL_ID = 4
         for partner in self:
+            # resolve transporter category id: prefer partner.company_id if set, else env.company
+            company = partner.company_id or self.env.company
+            transporter_cat = company.fulfillment_transporter_category_id
+            transporter_id = transporter_cat.id if transporter_cat else False
+
             cats = partner.category_id
-            if not cats:
+            if not cats or not transporter_id:
                 partner.courier_scoring = 0
+                partner.show_courier_scoring = False
                 continue
 
-            # sum of categories excluding the special id
-            other_sum = sum(int(c.courier_scoring or 0) for c in cats.filtered(lambda c: c.id != SPECIAL_ID))
+            # sum categories excluding transporter id
+            other_sum = sum(int(c.courier_scoring or 0) for c in cats.filtered(lambda c: c.id != transporter_id))
 
-            # only assign the sum if partner has special category
-            if SPECIAL_ID in cats.ids:
-                partner.courier_scoring = int(other_sum or 0)
-            else:
+            has_transporter = transporter_id in cats.ids
+            partner.show_courier_scoring = bool(has_transporter)
+
+            partner.courier_scoring = int(other_sum or 0) if has_transporter else 0
+
+    @api.onchange('category_id')
+    def _onchange_category_id(self):
+        """
+        Ensure immediate UI update when tags (category_id) change in the form.
+        Mirror compute logic to provide updated values to the client before save.
+        """
+        for partner in self:
+            company = partner.company_id or self.env.company
+            transporter_cat = company.fulfillment_transporter_category_id
+            transporter_id = transporter_cat.id if transporter_cat else False
+
+            cats = partner.category_id
+            if not cats or not transporter_id:
                 partner.courier_scoring = 0
+                partner.show_courier_scoring = False
+                continue
+
+            other_sum = sum(int(c.courier_scoring or 0) for c in cats.filtered(lambda c: c.id != transporter_id))
+            has_transporter = transporter_id in cats.ids
+            partner.show_courier_scoring = bool(has_transporter)
+            partner.courier_scoring = int(other_sum or 0) if has_transporter else 0
 
     @api.depends('courier_scoring')
     def _compute_courier_scoring_label(self):

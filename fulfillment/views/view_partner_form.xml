@@ -1,16 +1,16 @@
 <odoo>
-  <!-- Inherit partner form and place courier fields right after the category field -->
   <record id="view_partner_form_inherit_fulfillment" model="ir.ui.view">
     <field name="name">res.partner.form.fulfillment</field>
     <field name="model">res.partner</field>
+    <!-- Make sure this ref matches the partner form view in your Odoo 19 instance -->
     <field name="inherit_id" ref="base.view_partner_form"/>
     <field name="arch" type="xml">
-      <!-- find the category field and insert our computed fields after it -->
       <xpath expr="//field[@name='category_id']" position="after">
-        <!-- show computed integer score (readonly) -->
-        <field name="courier_scoring" readonly="1"/>
-        <!-- show computed label (readonly) -->
-        <field name="courier_scoring_label" readonly="1"/>
+        <!-- ensure boolean is loaded in the form record -->
+        <field name="show_courier_scoring" invisible="1"/>
+        <!-- use invisible attribute expression (Odoo 19 style) -->
+        <field name="courier_scoring" readonly="1" invisible="not show_courier_scoring"/>
+        <field name="courier_scoring_label" readonly="1" invisible="not show_courier_scoring"/>
       </xpath>
     </field>
   </record>
