@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+    <!-- Add a Dashboard submenu under Inventory; safe (non destructive) -->
+    <record id="menu_inventory_dashboard_fulfillment" model="ir.ui.menu">
+      <field name="name">Dashboard</field>
+      <field name="parent_id" ref="stock.menu_stock_root"/>
+      <field name="action" ref="fulfillment.action_stock_picking_type_overview_custom"/>
+      <field name="sequence" eval="-1"/>
+    </record>
+  </data>
+</odoo>

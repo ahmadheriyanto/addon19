@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+    <record id="stock_picking_type_kanban_custom" model="ir.ui.view">
+      <field name="name">stock.picking.type.kanban.custom</field>
+      <field name="model">stock.picking.type</field>
+      <field name="arch" type="xml">
+        <kanban class="o_stock_kanban" js_class="stock_dashboard_kanban"
+                records_draggable="0" create="0" group_create="false" can_open="0">
+          <field name="color"/>
+          <field name="code"/>
+          <field name="kanban_dashboard_graph"/>
+          <field name="show_picking_type" invisible="1"/>
+          <templates>
+            <t t-name="card">
+              <div t-if="record.show_picking_type.raw_value" class="px-2">
+                <a t-if="!selection_mode" type="object" name="get_stock_picking_action_picking_type">
+                  <field class="fw-bold fs-4" name="name"/>
+                </a>
+                <field t-if="selection_mode" class="fw-bold fs-4" name="name"/>
+                <div class="mt-3" style="background:#000;color:#fff;padding:10px;border-radius:6px;">
+                  <table style="width:100%;color:#fff;border-collapse:collapse;">
+                    <thead>
+                      <tr>
+                        <th style="text-align:left;padding-right:12px;">&#160;</th>
+                        <th style="text-align:center;padding:0 8px;">Reguler</th>
+                        <th style="text-align:center;padding:0 8px;">Medium</th>
+                        <th style="text-align:center;padding-left:8px;">Instan</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td style="text-align:left;font-weight:600;padding:6px 8px;">Draft</td>
+                        <td style="text-align:center;padding:6px 8px;">0</td>
+                        <td style="text-align:center;padding:6px 8px;">0</td>
+                        <td style="text-align:center;padding:6px 8px;">0</td>
+                      </tr>
+                      <tr>
+                        <td style="text-align:left;font-weight:600;padding:6px 8px;">To Process</td>
+                        <td style="text-align:center;padding:6px 8px;">0</td>
+                        <td style="text-align:center;padding:6px 8px;">0</td>
+                        <td style="text-align:center;padding:6px 8px;">0</td>
+                      </tr>
+                      <tr>
+                        <td style="text-align:left;font-weight:600;padding:6px 8px;">Waiting</td>
+                        <td style="text-align:center;padding:6px 8px;">0</td>
+                        <td style="text-align:center;padding:6px 8px;">0</td>
+                        <td style="text-align:center;padding:6px 8px;">0</td>
+                      </tr>
+                      <tr>
+                        <td style="text-align:left;font-weight:600;padding:6px 8px;">Ready</td>
+                        <td style="text-align:center;padding:6px 8px;">0</td>
+                        <td style="text-align:center;padding:6px 8px;">0</td>
+                        <td style="text-align:center;padding:6px 8px;">0</td>
+                      </tr>
+                      <tr>
+                        <td style="text-align:left;font-weight:600;padding:6px 8px;">Backorder</td>
+                        <td style="text-align:center;padding:6px 8px;">0</td>
+                        <td style="text-align:center;padding:6px 8px;">0</td>
+                        <td style="text-align:center;padding:6px 8px;">0</td>
+                      </tr>
+                      <tr>
+                        <td style="text-align:left;font-weight:600;padding:6px 8px;">Done</td>
+                        <td style="text-align:center;padding:6px 8px;">0</td>
+                        <td style="text-align:center;padding:6px 8px;">0</td>
+                        <td style="text-align:center;padding:6px 8px;">0</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </t>
+          </templates>
+        </kanban>
+      </field>
+    </record>
+  </data>
+</odoo>

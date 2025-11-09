@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+    <!-- New action: use custom kanban first, form second (keeps the form view) -->
+    <record id="action_stock_picking_type_overview_custom" model="ir.actions.act_window">
+      <field name="name">Inventory Overview (Custom)</field>
+      <field name="res_model">stock.picking.type</field>
+      <field name="view_mode">kanban,form</field>
+      <field name="view_ids" eval="[
+        (5, 0, 0),
+        (0, 0, {'view_mode': 'kanban', 'view_id': ref('fulfillment.stock_picking_type_kanban_custom')}),
+        (0, 0, {'view_mode': 'form',   'view_id': ref('stock.view_picking_type_form')})
+      ]"/>
+    </record>
+  </data>
+</odoo>
