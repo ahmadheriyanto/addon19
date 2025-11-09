@@ -151,6 +151,14 @@ class IncomingStagingStockReceipt(models.Model):
                     'move_ids': move_vals_list,
                 }
 
+                # Carry-forward courier fields from incoming_staging into stock.picking
+                # rec is sudo() record, so principal_courier_id is accessible
+                if getattr(rec, 'principal_courier_id', False):
+                    picking_vals['principal_courier_id'] = rec.principal_courier_id.id
+                    # related stored courier_priority exists on stock.picking model, but we can set it explicitly
+                    # using the partner's courier_scoring_label to avoid depending on related recompute timing.
+                    picking_vals['courier_priority'] = rec.principal_courier_id.courier_scoring_label or ''
+
                 picking = env['stock.picking'].create(picking_vals)
 
                 # Confirm and assign -> picking should become 'assigned' (Ready)

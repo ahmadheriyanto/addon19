@@ -15,7 +15,7 @@ Long description of module's purpose
     # for the full list
     'category': 'Inventory',
     'version': '0.1',
-
+    'license': 'LGPL-3',
     # any module necessary for this one to work correctly
     'depends': [
         'base',
@@ -37,6 +37,7 @@ Long description of module's purpose
         'views/res_users_apikeys_inherit.xml',
         'views/partner_category_views.xml',
         'views/view_partner_form.xml',
+        'views/view_picking_form.xml',
     ],
     # only loaded in demonstration mode
     'demo': [

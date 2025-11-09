@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="view_picking_form_inherit_fulfillment_principal_courier" model="ir.ui.view">
+    <field name="name">stock.picking.form.fulfillment.principal.courier</field>
+    <field name="model">stock.picking</field>
+    <field name="inherit_id" ref="stock.view_picking_form"/>
+    <field name="arch" type="xml">
+      <!-- Insert the transporter_partner_ids invisible field (so client receives it in record data),
+           then use transporter_partner_ids in the domain for principal_courier_id -->
+      <xpath expr="//field[@name='origin']" position="after">
+        <!-- ensure this field is present in the record that the client holds -->
+        <field name="transporter_partner_ids" invisible="1"/>
+        <field name="principal_courier_id"
+               domain="[('id','in', transporter_partner_ids)]"
+               options="{'no_create': True}"/>
+        <field name="courier_priority" readonly="1"/>
+      </xpath>
+    </field>
+  </record>
+</odoo>
