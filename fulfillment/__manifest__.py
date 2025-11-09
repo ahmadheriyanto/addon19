@@ -38,6 +38,7 @@ Long description of module's purpose
         'views/partner_category_views.xml',
         'views/view_partner_form.xml',
         'views/view_picking_form.xml',
+        'views/stock_dashboard_templates.xml',
     ],
     # only loaded in demonstration mode
     'demo': [
