@@ -1,16 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
   <data>
+    <!-- Kanban: styled statistics table. Each non-zero number is a type="object" anchor
+         that calls action_open_pickings on the picking.type record, passing context:
+         {'picking_type_id': <id>, 'state': <state_bucket>, 'priority': <priority_key>} -->
     <record id="stock_picking_type_kanban_custom" model="ir.ui.view">
       <field name="name">stock.picking.type.kanban.custom</field>
       <field name="model">stock.picking.type</field>
       <field name="arch" type="xml">
         <kanban class="o_stock_kanban" js_class="stock_dashboard_kanban"
                 records_draggable="0" create="0" group_create="false" can_open="0">
+          <!-- required fields returned in RPC -->
           <field name="color"/>
           <field name="code"/>
           <field name="kanban_dashboard_graph"/>
           <field name="show_picking_type" invisible="1"/>
+
+          <!-- computed statistic fields -->
           <field name="count_draft_reguler"/>
           <field name="count_draft_medium"/>
           <field name="count_draft_instan"/>
@@ -33,13 +39,15 @@
           <templates>
             <t t-name="card">
               <div t-if="record.show_picking_type.raw_value" name="stock_picking" class="o_kanban_record_content p-3">
+                <!-- title (clickable) -->
                 <a t-if="!selection_mode" type="object" name="get_stock_picking_action_picking_type">
                   <field class="fw-bold fs-5" name="name"/>
                 </a>
                 <field t-if="selection_mode" class="fw-bold fs-5" name="name"/>
 
+                <!-- Card container -->
                 <div style="margin-top:12px;padding:12px;border-radius:10px;background:#0f1720;color:#ffffff;box-shadow:0 6px 18px rgba(2,6,23,0.6);">
-                  <table style="width:100%;color:#e6eef6;border-collapse:separate;border-spacing:0 10px;">
+                  <table style="width:100%;color:#e6eef6;border-collapse:separate;border-spacing:0 10px">
                     <thead>
                       <tr>
                         <th style="text-align:left;padding:8px 12px 8px 6px;font-weight:700;color:#dbeafe;">&#160;</th>
@@ -49,101 +57,234 @@
                       </tr>
                     </thead>
                     <tbody>
+                      <!-- Draft -->
                       <tr style="background:rgba(255,255,255,0.02);border-radius:6px;">
                         <td style="text-align:left;padding:10px 12px;font-weight:600;color:#c7d2fe;">Draft</td>
+
                         <td style="text-align:center;padding:10px 12px;">
-                          <t t-if="record.count_draft_reguler.raw_value and record.count_draft_reguler.raw_value != 0"><t t-esc="record.count_draft_reguler.raw_value"/></t>
+                          <t t-if="record.count_draft_reguler.raw_value and record.count_draft_reguler.raw_value != 0">
+                            <a type="object"
+                               name="action_open_pickings"
+                               t-att-context="{'picking_type_id': record.id.raw_value, 'state': 'draft', 'priority': 'reguler'}">
+                              <t t-esc="record.count_draft_reguler.raw_value"/>
+                            </a>
+                          </t>
                           <t t-else="">-</t>
                         </td>
+
                         <td style="text-align:center;padding:10px 12px;">
-                          <t t-if="record.count_draft_medium.raw_value and record.count_draft_medium.raw_value != 0"><t t-esc="record.count_draft_medium.raw_value"/></t>
+                          <t t-if="record.count_draft_medium.raw_value and record.count_draft_medium.raw_value != 0">
+                            <a type="object"
+                               name="action_open_pickings"
+                               t-att-context="{'picking_type_id': record.id.raw_value, 'state': 'draft', 'priority': 'medium'}">
+                              <t t-esc="record.count_draft_medium.raw_value"/>
+                            </a>
+                          </t>
                           <t t-else="">-</t>
                         </td>
+
                         <td style="text-align:center;padding:10px 12px;">
-                          <t t-if="record.count_draft_instan.raw_value and record.count_draft_instan.raw_value != 0"><t t-esc="record.count_draft_instan.raw_value"/></t>
+                          <t t-if="record.count_draft_instan.raw_value and record.count_draft_instan.raw_value != 0">
+                            <a type="object"
+                               name="action_open_pickings"
+                               t-att-context="{'picking_type_id': record.id.raw_value, 'state': 'draft', 'priority': 'instan'}">
+                              <t t-esc="record.count_draft_instan.raw_value"/>
+                            </a>
+                          </t>
                           <t t-else="">-</t>
                         </td>
                       </tr>
 
+                      <!-- To Process -->
                       <tr style="background:rgba(255,255,255,0.01);border-radius:6px;">
                         <td style="text-align:left;padding:10px 12px;font-weight:600;color:#c7d2fe;">To Process</td>
+
                         <td style="text-align:center;padding:10px 12px;">
-                          <t t-if="record.count_to_process_reguler.raw_value and record.count_to_process_reguler.raw_value != 0"><t t-esc="record.count_to_process_reguler.raw_value"/></t>
+                          <t t-if="record.count_to_process_reguler.raw_value and record.count_to_process_reguler.raw_value != 0">
+                            <a type="object"
+                               name="action_open_pickings"
+                               t-att-context="{'picking_type_id': record.id.raw_value, 'state': 'to_process', 'priority': 'reguler'}">
+                              <t t-esc="record.count_to_process_reguler.raw_value"/>
+                            </a>
+                          </t>
                           <t t-else="">-</t>
                         </td>
+
                         <td style="text-align:center;padding:10px 12px;">
-                          <t t-if="record.count_to_process_medium.raw_value and record.count_to_process_medium.raw_value != 0"><t t-esc="record.count_to_process_medium.raw_value"/></t>
+                          <t t-if="record.count_to_process_medium.raw_value and record.count_to_process_medium.raw_value != 0">
+                            <a type="object"
+                               name="action_open_pickings"
+                               t-att-context="{'picking_type_id': record.id.raw_value, 'state': 'to_process', 'priority': 'medium'}">
+                              <t t-esc="record.count_to_process_medium.raw_value"/>
+                            </a>
+                          </t>
                           <t t-else="">-</t>
                         </td>
+
                         <td style="text-align:center;padding:10px 12px;">
-                          <t t-if="record.count_to_process_instan.raw_value and record.count_to_process_instan.raw_value != 0"><t t-esc="record.count_to_process_instan.raw_value"/></t>
+                          <t t-if="record.count_to_process_instan.raw_value and record.count_to_process_instan.raw_value != 0">
+                            <a type="object"
+                               name="action_open_pickings"
+                               t-att-context="{'picking_type_id': record.id.raw_value, 'state': 'to_process', 'priority': 'instan'}">
+                              <t t-esc="record.count_to_process_instan.raw_value"/>
+                            </a>
+                          </t>
                           <t t-else="">-</t>
                         </td>
                       </tr>
 
+                      <!-- Waiting -->
                       <tr style="background:rgba(255,255,255,0.02);border-radius:6px;">
                         <td style="text-align:left;padding:10px 12px;font-weight:600;color:#c7d2fe;">Waiting</td>
+
                         <td style="text-align:center;padding:10px 12px;">
-                          <t t-if="record.count_waiting_reguler.raw_value and record.count_waiting_reguler.raw_value != 0"><t t-esc="record.count_waiting_reguler.raw_value"/></t>
+                          <t t-if="record.count_waiting_reguler.raw_value and record.count_waiting_reguler.raw_value != 0">
+                            <a type="object"
+                               name="action_open_pickings"
+                               t-att-context="{'picking_type_id': record.id.raw_value, 'state': 'waiting', 'priority': 'reguler'}">
+                              <t t-esc="record.count_waiting_reguler.raw_value"/>
+                            </a>
+                          </t>
                           <t t-else="">-</t>
                         </td>
+
                         <td style="text-align:center;padding:10px 12px;">
-                          <t t-if="record.count_waiting_medium.raw_value and record.count_waiting_medium.raw_value != 0"><t t-esc="record.count_waiting_medium.raw_value"/></t>
+                          <t t-if="record.count_waiting_medium.raw_value and record.count_waiting_medium.raw_value != 0">
+                            <a type="object"
+                               name="action_open_pickings"
+                               t-att-context="{'picking_type_id': record.id.raw_value, 'state': 'waiting', 'priority': 'medium'}">
+                              <t t-esc="record.count_waiting_medium.raw_value"/>
+                            </a>
+                          </t>
                           <t t-else="">-</t>
                         </td>
+
                         <td style="text-align:center;padding:10px 12px;">
-                          <t t-if="record.count_waiting_instan.raw_value and record.count_waiting_instan.raw_value != 0"><t t-esc="record.count_waiting_instan.raw_value"/></t>
+                          <t t-if="record.count_waiting_instan.raw_value and record.count_waiting_instan.raw_value != 0">
+                            <a type="object"
+                               name="action_open_pickings"
+                               t-att-context="{'picking_type_id': record.id.raw_value, 'state': 'waiting', 'priority': 'instan'}">
+                              <t t-esc="record.count_waiting_instan.raw_value"/>
+                            </a>
+                          </t>
                           <t t-else="">-</t>
                         </td>
                       </tr>
 
+                      <!-- Ready -->
                       <tr style="background:rgba(255,255,255,0.01);border-radius:6px;">
                         <td style="text-align:left;padding:10px 12px;font-weight:600;color:#c7d2fe;">Ready</td>
+
                         <td style="text-align:center;padding:10px 12px;">
-                          <t t-if="record.count_ready_reguler.raw_value and record.count_ready_reguler.raw_value != 0"><t t-esc="record.count_ready_reguler.raw_value"/></t>
+                          <t t-if="record.count_ready_reguler.raw_value and record.count_ready_reguler.raw_value != 0">
+                            <a type="object"
+                               name="action_open_pickings"
+                               t-att-context="{'picking_type_id': record.id.raw_value, 'state': 'ready', 'priority': 'reguler'}">
+                              <t t-esc="record.count_ready_reguler.raw_value"/>
+                            </a>
+                          </t>
                           <t t-else="">-</t>
                         </td>
+
                         <td style="text-align:center;padding:10px 12px;">
-                          <t t-if="record.count_ready_medium.raw_value and record.count_ready_medium.raw_value != 0"><t t-esc="record.count_ready_medium.raw_value"/></t>
+                          <t t-if="record.count_ready_medium.raw_value and record.count_ready_medium.raw_value != 0">
+                            <a type="object"
+                               name="action_open_pickings"
+                               t-att-context="{'picking_type_id': record.id.raw_value, 'state': 'ready', 'priority': 'medium'}">
+                              <t t-esc="record.count_ready_medium.raw_value"/>
+                            </a>
+                          </t>
                           <t t-else="">-</t>
                         </td>
+
                         <td style="text-align:center;padding:10px 12px;">
-                          <t t-if="record.count_ready_instan.raw_value and record.count_ready_instan.raw_value != 0"><t t-esc="record.count_ready_instan.raw_value"/></t>
+                          <t t-if="record.count_ready_instan.raw_value and record.count_ready_instan.raw_value != 0">
+                            <a type="object"
+                               name="action_open_pickings"
+                               t-att-context="{'picking_type_id': record.id.raw_value, 'state': 'ready', 'priority': 'instan'}">
+                              <t t-esc="record.count_ready_instan.raw_value"/>
+                            </a>
+                          </t>
                           <t t-else="">-</t>
                         </td>
                       </tr>
 
+                      <!-- Backorder -->
                       <tr style="background:rgba(255,255,255,0.02);border-radius:6px;">
                         <td style="text-align:left;padding:10px 12px;font-weight:600;color:#c7d2fe;">Backorder</td>
+
                         <td style="text-align:center;padding:10px 12px;">
-                          <t t-if="record.count_backorder_reguler.raw_value and record.count_backorder_reguler.raw_value != 0"><t t-esc="record.count_backorder_reguler.raw_value"/></t>
+                          <t t-if="record.count_backorder_reguler.raw_value and record.count_backorder_reguler.raw_value != 0">
+                            <a type="object"
+                               name="action_open_pickings"
+                               t-att-context="{'picking_type_id': record.id.raw_value, 'state': 'backorder', 'priority': 'reguler'}">
+                              <t t-esc="record.count_backorder_reguler.raw_value"/>
+                            </a>
+                          </t>
                           <t t-else="">-</t>
                         </td>
+
                         <td style="text-align:center;padding:10px 12px;">
-                          <t t-if="record.count_backorder_medium.raw_value and record.count_backorder_medium.raw_value != 0"><t t-esc="record.count_backorder_medium.raw_value"/></t>
+                          <t t-if="record.count_backorder_medium.raw_value and record.count_backorder_medium.raw_value != 0">
+                            <a type="object"
+                               name="action_open_pickings"
+                               t-att-context="{'picking_type_id': record.id.raw_value, 'state': 'backorder', 'priority': 'medium'}">
+                              <t t-esc="record.count_backorder_medium.raw_value"/>
+                            </a>
+                          </t>
                           <t t-else="">-</t>
                         </td>
+
                         <td style="text-align:center;padding:10px 12px;">
-                          <t t-if="record.count_backorder_instan.raw_value and record.count_backorder_instan.raw_value != 0"><t t-esc="record.count_backorder_instan.raw_value"/></t>
+                          <t t-if="record.count_backorder_instan.raw_value and record.count_backorder_instan.raw_value != 0">
+                            <a type="object"
+                               name="action_open_pickings"
+                               t-att-context="{'picking_type_id': record.id.raw_value, 'state': 'backorder', 'priority': 'instan'}">
+                              <t t-esc="record.count_backorder_instan.raw_value"/>
+                            </a>
+                          </t>
                           <t t-else="">-</t>
                         </td>
                       </tr>
 
+                      <!-- Done -->
                       <tr style="background:rgba(255,255,255,0.01);border-radius:6px;">
                         <td style="text-align:left;padding:10px 12px;font-weight:600;color:#c7d2fe;">Done</td>
+
                         <td style="text-align:center;padding:10px 12px;">
-                          <t t-if="record.count_done_reguler.raw_value and record.count_done_reguler.raw_value != 0"><t t-esc="record.count_done_reguler.raw_value"/></t>
+                          <t t-if="record.count_done_reguler.raw_value and record.count_done_reguler.raw_value != 0">
+                            <a type="object"
+                               name="action_open_pickings"
+                               t-att-context="{'picking_type_id': record.id.raw_value, 'state': 'done', 'priority': 'reguler'}">
+                              <t t-esc="record.count_done_reguler.raw_value"/>
+                            </a>
+                          </t>
                           <t t-else="">-</t>
                         </td>
+
                         <td style="text-align:center;padding:10px 12px;">
-                          <t t-if="record.count_done_medium.raw_value and record.count_done_medium.raw_value != 0"><t t-esc="record.count_done_medium.raw_value"/></t>
+                          <t t-if="record.count_done_medium.raw_value and record.count_done_medium.raw_value != 0">
+                            <a type="object"
+                               name="action_open_pickings"
+                               t-att-context="{'picking_type_id': record.id.raw_value, 'state': 'done', 'priority': 'medium'}">
+                              <t t-esc="record.count_done_medium.raw_value"/>
+                            </a>
+                          </t>
                           <t t-else="">-</t>
                         </td>
+
                         <td style="text-align:center;padding:10px 12px;">
-                          <t t-if="record.count_done_instan.raw_value and record.count_done_instan.raw_value != 0"><t t-esc="record.count_done_instan.raw_value"/></t>
+                          <t t-if="record.count_done_instan.raw_value and record.count_done_instan.raw_value != 0">
+                            <a type="object"
+                               name="action_open_pickings"
+                               t-att-context="{'picking_type_id': record.id.raw_value, 'state': 'done', 'priority': 'instan'}">
+                              <t t-esc="record.count_done_instan.raw_value"/>
+                            </a>
+                          </t>
                           <t t-else="">-</t>
                         </td>
                       </tr>
+
                     </tbody>
                   </table>
                 </div>

@@ -23,7 +23,11 @@ Long description of module's purpose
         'website',
         'stock',
         'uom',
-    ],    
+    ],
+    "assets": {
+        "web.assets_backend": [            
+        ],
+    },    
     # always loaded
     'data': [
         'security/ir.model.access.csv',

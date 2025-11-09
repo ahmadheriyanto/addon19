@@ -158,3 +158,64 @@ class StockPickingType(models.Model):
                 if 'backorder_id' in picking_fields:
                     bcnt = Picking.search_count(base + [('backorder_id', '!=', False)])
                     rec.count_backorder_reguler = bcnt
+
+    # (Assumes your computed count fields are already defined elsewhere in the module.)
+    # This method is called by the kanban anchors (type="object") and returns an ir.actions.act_window
+    # showing stock.picking records filtered according to the clicked cell.
+    def action_open_pickings(self):
+        """Return an action opening stock.picking filtered by picking type, state and priority.
+
+        Context keys expected from the kanban anchor:
+          - 'picking_type_id' : int (redundant - we use self.id)
+          - 'state'           : 'draft'|'to_process'|'waiting'|'ready'|'backorder'|'done'
+          - 'priority'        : 'reguler'|'medium'|'instan'
+        """
+        self.ensure_one()
+        ctx = dict(self.env.context or {})
+        state_key = ctx.get('state')
+        priority_key = ctx.get('priority')
+
+        domain = [('picking_type_id', '=', self.id)]
+
+        # Map UI buckets to real stock.picking.state values when needed
+        if state_key == 'backorder':
+            domain.append(('backorder_id', '!=', False))
+        else:
+            state_map = {
+                'draft': 'draft',
+                'to_process': 'confirmed',
+                'waiting': 'waiting',
+                'ready': 'assigned',
+                'done': 'done',
+            }
+            mapped_state = state_map.get(state_key)
+            if mapped_state:
+                domain.append(('state', '=', mapped_state))
+
+        # Priority filter (courier_priority is stored as a Char related field in your setup)
+        if priority_key:
+            if priority_key == 'reguler':
+                domain.append(('courier_priority', 'ilike', 'regul'))
+            elif priority_key == 'medium':
+                domain.append(('courier_priority', 'ilike', 'med'))
+            elif priority_key == 'instan':
+                domain.append(('courier_priority', 'ilike', 'inst'))
+
+        # Try to reuse the standard stock pickings action, override domain/context
+        try:
+            action = self.env.ref('stock.action_picking_tree_all').read()[0]
+        except Exception:
+            action = {
+                'type': 'ir.actions.act_window',
+                'name': _('Transfer Orders'),
+                'res_model': 'stock.picking',
+                'view_mode': 'kanban,tree,form',
+                'target': 'current',
+            }
+
+        action.update({
+            'domain': domain,
+            # Optionally set a context to prefill new records etc:
+            'context': {},
+        })
+        return action
