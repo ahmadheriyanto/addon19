@@ -11,63 +11,143 @@
           <field name="code"/>
           <field name="kanban_dashboard_graph"/>
           <field name="show_picking_type" invisible="1"/>
+          <field name="count_draft_reguler"/>
+          <field name="count_draft_medium"/>
+          <field name="count_draft_instan"/>
+          <field name="count_to_process_reguler"/>
+          <field name="count_to_process_medium"/>
+          <field name="count_to_process_instan"/>
+          <field name="count_waiting_reguler"/>
+          <field name="count_waiting_medium"/>
+          <field name="count_waiting_instan"/>
+          <field name="count_ready_reguler"/>
+          <field name="count_ready_medium"/>
+          <field name="count_ready_instan"/>
+          <field name="count_backorder_reguler"/>
+          <field name="count_backorder_medium"/>
+          <field name="count_backorder_instan"/>
+          <field name="count_done_reguler"/>
+          <field name="count_done_medium"/>
+          <field name="count_done_instan"/>
+
           <templates>
             <t t-name="card">
-              <div t-if="record.show_picking_type.raw_value" class="px-2">
+              <div t-if="record.show_picking_type.raw_value" name="stock_picking" class="o_kanban_record_content p-3">
                 <a t-if="!selection_mode" type="object" name="get_stock_picking_action_picking_type">
-                  <field class="fw-bold fs-4" name="name"/>
+                  <field class="fw-bold fs-5" name="name"/>
                 </a>
-                <field t-if="selection_mode" class="fw-bold fs-4" name="name"/>
-                <div class="mt-3" style="background:#000;color:#fff;padding:10px;border-radius:6px;">
-                  <table style="width:100%;color:#fff;border-collapse:collapse;">
+                <field t-if="selection_mode" class="fw-bold fs-5" name="name"/>
+
+                <div style="margin-top:12px;padding:12px;border-radius:10px;background:#0f1720;color:#ffffff;box-shadow:0 6px 18px rgba(2,6,23,0.6);">
+                  <table style="width:100%;color:#e6eef6;border-collapse:separate;border-spacing:0 10px;">
                     <thead>
                       <tr>
-                        <th style="text-align:left;padding-right:12px;">&#160;</th>
-                        <th style="text-align:center;padding:0 8px;">Reguler</th>
-                        <th style="text-align:center;padding:0 8px;">Medium</th>
-                        <th style="text-align:center;padding-left:8px;">Instan</th>
+                        <th style="text-align:left;padding:8px 12px 8px 6px;font-weight:700;color:#dbeafe;">&#160;</th>
+                        <th style="text-align:center;padding:8px 12px;font-weight:700;color:#ffffff;">Reguler</th>
+                        <th style="text-align:center;padding:8px 12px;font-weight:700;color:#ffffff;">Medium</th>
+                        <th style="text-align:center;padding:8px 12px;font-weight:700;color:#ffffff;">Instan</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <td style="text-align:left;font-weight:600;padding:6px 8px;">Draft</td>
-                        <td style="text-align:center;padding:6px 8px;">0</td>
-                        <td style="text-align:center;padding:6px 8px;">0</td>
-                        <td style="text-align:center;padding:6px 8px;">0</td>
+                      <tr style="background:rgba(255,255,255,0.02);border-radius:6px;">
+                        <td style="text-align:left;padding:10px 12px;font-weight:600;color:#c7d2fe;">Draft</td>
+                        <td style="text-align:center;padding:10px 12px;">
+                          <t t-if="record.count_draft_reguler.raw_value and record.count_draft_reguler.raw_value != 0"><t t-esc="record.count_draft_reguler.raw_value"/></t>
+                          <t t-else="">-</t>
+                        </td>
+                        <td style="text-align:center;padding:10px 12px;">
+                          <t t-if="record.count_draft_medium.raw_value and record.count_draft_medium.raw_value != 0"><t t-esc="record.count_draft_medium.raw_value"/></t>
+                          <t t-else="">-</t>
+                        </td>
+                        <td style="text-align:center;padding:10px 12px;">
+                          <t t-if="record.count_draft_instan.raw_value and record.count_draft_instan.raw_value != 0"><t t-esc="record.count_draft_instan.raw_value"/></t>
+                          <t t-else="">-</t>
+                        </td>
                       </tr>
-                      <tr>
-                        <td style="text-align:left;font-weight:600;padding:6px 8px;">To Process</td>
-                        <td style="text-align:center;padding:6px 8px;">0</td>
-                        <td style="text-align:center;padding:6px 8px;">0</td>
-                        <td style="text-align:center;padding:6px 8px;">0</td>
+
+                      <tr style="background:rgba(255,255,255,0.01);border-radius:6px;">
+                        <td style="text-align:left;padding:10px 12px;font-weight:600;color:#c7d2fe;">To Process</td>
+                        <td style="text-align:center;padding:10px 12px;">
+                          <t t-if="record.count_to_process_reguler.raw_value and record.count_to_process_reguler.raw_value != 0"><t t-esc="record.count_to_process_reguler.raw_value"/></t>
+                          <t t-else="">-</t>
+                        </td>
+                        <td style="text-align:center;padding:10px 12px;">
+                          <t t-if="record.count_to_process_medium.raw_value and record.count_to_process_medium.raw_value != 0"><t t-esc="record.count_to_process_medium.raw_value"/></t>
+                          <t t-else="">-</t>
+                        </td>
+                        <td style="text-align:center;padding:10px 12px;">
+                          <t t-if="record.count_to_process_instan.raw_value and record.count_to_process_instan.raw_value != 0"><t t-esc="record.count_to_process_instan.raw_value"/></t>
+                          <t t-else="">-</t>
+                        </td>
                       </tr>
-                      <tr>
-                        <td style="text-align:left;font-weight:600;padding:6px 8px;">Waiting</td>
-                        <td style="text-align:center;padding:6px 8px;">0</td>
-                        <td style="text-align:center;padding:6px 8px;">0</td>
-                        <td style="text-align:center;padding:6px 8px;">0</td>
+
+                      <tr style="background:rgba(255,255,255,0.02);border-radius:6px;">
+                        <td style="text-align:left;padding:10px 12px;font-weight:600;color:#c7d2fe;">Waiting</td>
+                        <td style="text-align:center;padding:10px 12px;">
+                          <t t-if="record.count_waiting_reguler.raw_value and record.count_waiting_reguler.raw_value != 0"><t t-esc="record.count_waiting_reguler.raw_value"/></t>
+                          <t t-else="">-</t>
+                        </td>
+                        <td style="text-align:center;padding:10px 12px;">
+                          <t t-if="record.count_waiting_medium.raw_value and record.count_waiting_medium.raw_value != 0"><t t-esc="record.count_waiting_medium.raw_value"/></t>
+                          <t t-else="">-</t>
+                        </td>
+                        <td style="text-align:center;padding:10px 12px;">
+                          <t t-if="record.count_waiting_instan.raw_value and record.count_waiting_instan.raw_value != 0"><t t-esc="record.count_waiting_instan.raw_value"/></t>
+                          <t t-else="">-</t>
+                        </td>
                       </tr>
-                      <tr>
-                        <td style="text-align:left;font-weight:600;padding:6px 8px;">Ready</td>
-                        <td style="text-align:center;padding:6px 8px;">0</td>
-                        <td style="text-align:center;padding:6px 8px;">0</td>
-                        <td style="text-align:center;padding:6px 8px;">0</td>
+
+                      <tr style="background:rgba(255,255,255,0.01);border-radius:6px;">
+                        <td style="text-align:left;padding:10px 12px;font-weight:600;color:#c7d2fe;">Ready</td>
+                        <td style="text-align:center;padding:10px 12px;">
+                          <t t-if="record.count_ready_reguler.raw_value and record.count_ready_reguler.raw_value != 0"><t t-esc="record.count_ready_reguler.raw_value"/></t>
+                          <t t-else="">-</t>
+                        </td>
+                        <td style="text-align:center;padding:10px 12px;">
+                          <t t-if="record.count_ready_medium.raw_value and record.count_ready_medium.raw_value != 0"><t t-esc="record.count_ready_medium.raw_value"/></t>
+                          <t t-else="">-</t>
+                        </td>
+                        <td style="text-align:center;padding:10px 12px;">
+                          <t t-if="record.count_ready_instan.raw_value and record.count_ready_instan.raw_value != 0"><t t-esc="record.count_ready_instan.raw_value"/></t>
+                          <t t-else="">-</t>
+                        </td>
                       </tr>
-                      <tr>
-                        <td style="text-align:left;font-weight:600;padding:6px 8px;">Backorder</td>
-                        <td style="text-align:center;padding:6px 8px;">0</td>
-                        <td style="text-align:center;padding:6px 8px;">0</td>
-                        <td style="text-align:center;padding:6px 8px;">0</td>
+
+                      <tr style="background:rgba(255,255,255,0.02);border-radius:6px;">
+                        <td style="text-align:left;padding:10px 12px;font-weight:600;color:#c7d2fe;">Backorder</td>
+                        <td style="text-align:center;padding:10px 12px;">
+                          <t t-if="record.count_backorder_reguler.raw_value and record.count_backorder_reguler.raw_value != 0"><t t-esc="record.count_backorder_reguler.raw_value"/></t>
+                          <t t-else="">-</t>
+                        </td>
+                        <td style="text-align:center;padding:10px 12px;">
+                          <t t-if="record.count_backorder_medium.raw_value and record.count_backorder_medium.raw_value != 0"><t t-esc="record.count_backorder_medium.raw_value"/></t>
+                          <t t-else="">-</t>
+                        </td>
+                        <td style="text-align:center;padding:10px 12px;">
+                          <t t-if="record.count_backorder_instan.raw_value and record.count_backorder_instan.raw_value != 0"><t t-esc="record.count_backorder_instan.raw_value"/></t>
+                          <t t-else="">-</t>
+                        </td>
                       </tr>
-                      <tr>
-                        <td style="text-align:left;font-weight:600;padding:6px 8px;">Done</td>
-                        <td style="text-align:center;padding:6px 8px;">0</td>
-                        <td style="text-align:center;padding:6px 8px;">0</td>
-                        <td style="text-align:center;padding:6px 8px;">0</td>
+
+                      <tr style="background:rgba(255,255,255,0.01);border-radius:6px;">
+                        <td style="text-align:left;padding:10px 12px;font-weight:600;color:#c7d2fe;">Done</td>
+                        <td style="text-align:center;padding:10px 12px;">
+                          <t t-if="record.count_done_reguler.raw_value and record.count_done_reguler.raw_value != 0"><t t-esc="record.count_done_reguler.raw_value"/></t>
+                          <t t-else="">-</t>
+                        </td>
+                        <td style="text-align:center;padding:10px 12px;">
+                          <t t-if="record.count_done_medium.raw_value and record.count_done_medium.raw_value != 0"><t t-esc="record.count_done_medium.raw_value"/></t>
+                          <t t-else="">-</t>
+                        </td>
+                        <td style="text-align:center;padding:10px 12px;">
+                          <t t-if="record.count_done_instan.raw_value and record.count_done_instan.raw_value != 0"><t t-esc="record.count_done_instan.raw_value"/></t>
+                          <t t-else="">-</t>
+                        </td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
+
               </div>
             </t>
           </templates>
