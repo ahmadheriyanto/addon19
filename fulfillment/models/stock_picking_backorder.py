@@ -1,41 +1,42 @@
 # -*- coding: utf-8 -*-
-from odoo import api, models
+from odoo import models
 
 class StockPicking(models.Model):
     _inherit = 'stock.picking'
 
     def _action_generate_backorder_wizard(self, show_transfers=False):
         """
-        Override to return a backorder confirmation wizard view variant that includes
-        the OOS button when the pickings match the configured 'fulfillment_default_operation_type_pick_id'.
-
-        We keep the default behavior for all other cases.
+        Use the context key 'button_validate_picking_ids' to decide whether
+        to show the custom OOS backorder wizard view (fulfillment.view_backorder_confirmation_oos).
+        Only choose the custom view when the pickings (from context or self) have
+        picking_type == company.fulfillment_default_operation_type_pick_id.
         """
-        action = super(StockPicking, self)._action_generate_backorder_wizard(show_transfers=show_transfers)
+        action = super()._action_generate_backorder_wizard(show_transfers=show_transfers)
 
-        # Determine if ANY of the pickings (self) use the configured pick-type for fulfillment picks.
-        # If so, switch the action to use our custom view that includes the OOS button.
-        try:
-            show_oos_view = False
-            for picking in self:
-                cfg_pt = picking.company_id and picking.company_id.fulfillment_default_operation_type_pick_id or None
-                if cfg_pt and picking.picking_type_id and picking.picking_type_id.id == cfg_pt.id:
-                    show_oos_view = True
-                    break
-        except Exception:
-            show_oos_view = False
+        # prefer explicit pick ids from context if provided
+        pick_ids_ctx = self.env.context.get('button_validate_picking_ids') or []
+        if isinstance(pick_ids_ctx, (list, tuple)):
+            pickings = self.env['stock.picking'].browse(list(pick_ids_ctx))
+            if not pickings:
+                pickings = self
+        else:
+            pickings = self
 
-        if show_oos_view:
-            # Use our custom view (defined in fulfillment/views/stock_backorder_confirmation_oos_view.xml)
-            # xmlid: fulfillment.fulfillment_view_backorder_confirmation_oos_inherit
-            try:
-                view = self.env.ref('fulfillment.fulfillment_view_backorder_confirmation_oos_inherit', raise_if_not_found=False)
-                if view:
-                    action['view_id'] = view.id
-                    # Ensure the views list includes the form view first
-                    action['views'] = [(view.id, 'form')] + [v for v in action.get('views', []) if v[1] != 'form']
-            except Exception:
-                # fall back to default action if anything goes wrong
-                pass
+        show_oos = False
+        for picking in pickings:
+            company = picking.company_id or self.env.company
+            cfg_pt = company.fulfillment_default_operation_type_pick_id
+            if cfg_pt and picking.picking_type_id and picking.picking_type_id.id == cfg_pt.id:
+                show_oos = True
+                break
+
+        if show_oos:
+            view = self.env.ref('fulfillment.view_backorder_confirmation_oos', raise_if_not_found=False)
+            if view:
+                action['view_id'] = view.id
+                action['views'] = [(view.id, 'form')] + [v for v in action.get('views', []) if v[1] != 'form']
+                ctx = dict(action.get('context') or {})
+                ctx['default_show_oos'] = True
+                action['context'] = ctx
 
         return action
