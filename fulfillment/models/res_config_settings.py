@@ -19,6 +19,14 @@ class ResConfigSettings(models.TransientModel):
         help="Company-level default operation type for pick",
     )
 
+    fulfillment_default_operation_type_oos_id = fields.Many2one(
+        'stock.picking.type',
+        related='company_id.fulfillment_default_operation_type_oos_id',
+        string='Default Operation Type for OOS',
+        readonly=False,
+        help="Company-level default operation type for Out of Stock",
+    )
+
     # Company-level transporter category exposed in settings for easy configuration
     fulfillment_transporter_category_id = fields.Many2one(
         'res.partner.category',

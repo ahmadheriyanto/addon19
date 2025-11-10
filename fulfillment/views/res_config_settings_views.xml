@@ -18,6 +18,11 @@
                 <field name="fulfillment_default_operation_type_pick_id"/>
               </group>
             </div>
+            <div class="o_setting_box">
+              <group>
+                <field name="fulfillment_default_operation_type_oos_id"/>
+              </group>
+            </div>
           </block>
           <block title="Transporter Category" name="fulfillment_transporter">
             <div class="o_setting_box">
