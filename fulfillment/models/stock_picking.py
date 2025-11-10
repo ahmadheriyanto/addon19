@@ -69,3 +69,38 @@ class StockPicking(models.Model):
                     "Selected courier '%s' is not assigned to the configured Transporter category '%s'."
                     % (partner.display_name, transporter_cat.name)
                 )
+
+
+    # Persisted customer information that comes from incoming_staging.
+    # These are simple Char fields so they are stored on the picking record permanently.
+    principal_customer_name = fields.Char(
+        string='Customer Name',
+        help='Customer name carried from incoming staging (kept on the picking)'
+    )
+    principal_customer_address = fields.Char(
+        string='Customer Address',
+        help='Customer address carried from incoming staging (kept on the picking)'
+    )
+
+    @api.model
+    def default_get(self, fields_list):
+        """Ensure default_get can supply the fields from context if provided."""
+        res = super(StockPicking, self).default_get(fields_list)
+        # Accept context defaults supplied from code like {'default_principal_customer_name': '...'}
+        ctx = dict(self.env.context or {})
+        if 'default_principal_customer_name' in ctx and 'principal_customer_name' in fields_list:
+            res.setdefault('principal_customer_name', ctx.get('default_principal_customer_name'))
+        if 'default_principal_customer_address' in ctx and 'principal_customer_address' in fields_list:
+            res.setdefault('principal_customer_address', ctx.get('default_principal_customer_address'))
+        return res
+
+    def copy(self, default=None):
+        """
+        Ensure copies of pickings (e.g. backorders / manual duplication) preserve the
+        principal_customer_name and principal_customer_address values by default.
+        """
+        default = dict(default or {})
+        # preserve values from the original if not explicitly overridden
+        default.setdefault('principal_customer_name', self.principal_customer_name)
+        default.setdefault('principal_customer_address', self.principal_customer_address)
+        return super(StockPicking, self).copy(default=default)

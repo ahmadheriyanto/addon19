@@ -43,13 +43,13 @@
                             <field name="type"/>
                             <field name="status"/>
                             <field name="principal_courier"/>
-                            <field name="courier_priority" readonly="1"/>
-                            <field name="principal_customer_name"/>
-                            <field name="principal_customer_address"/>
+                            <field name="courier_priority" readonly="1"/>                            
                         </group>
                         <group>
                             <field name="datetime_string"/>
                             <field name="partner_id"/>                            
+                            <field name="principal_customer_name"/>
+                            <field name="principal_customer_address"/>
                         </group>
                     </group>
 

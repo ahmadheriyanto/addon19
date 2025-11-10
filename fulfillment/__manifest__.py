@@ -41,9 +41,10 @@ Long description of module's purpose
         'views/partner_category_views.xml',
         'views/view_partner_form.xml',
         'views/view_picking_form.xml',
+        'views/view_picking_list.xml',
         'views/stock_picking_type_kanban_custom.xml',
         'views/stock_picking_type_action_custom.xml',
-        'views/stock_picking_type_menu_add.xml',
+        'views/stock_picking_type_menu_add.xml',        
     ],
     # only loaded in demonstration mode
     'demo': [
