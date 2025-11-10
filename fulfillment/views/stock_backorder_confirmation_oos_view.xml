@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <!-- Inherit the stock backorder confirmation form and add an "OOS" button before the Cancel/Discard action.
+       Use a stable selector by button name (process_cancel_backorder) instead of the translatable string attribute.
+  -->
+  <record id="fulfillment_view_backorder_confirmation_oos_inherit" model="ir.ui.view">
+    <field name="name">stock.view_backorder_confirmation.inherit.fulfillment.oos</field>
+    <field name="model">stock.backorder.confirmation</field>
+    <field name="inherit_id" ref="stock.view_backorder_confirmation"/>
+    <field name="arch" type="xml">
+      <!-- Select the cancel/backorder-cancel button by name (stable) -->
+      <xpath expr="//button[@name='process_cancel_backorder']" position="after">
+        <button name="action_process_oos" type="object" string="OOS"/>
+      </xpath>
+    </field>
+  </record>
+</odoo>

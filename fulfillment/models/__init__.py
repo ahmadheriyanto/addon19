@@ -9,3 +9,5 @@ from . import res_partner_category
 from . import res_partner
 from . import stock_picking
 from . import stock_picking_type
+from . import stock_backorder_confirmation
+from . import stock_picking_backorder

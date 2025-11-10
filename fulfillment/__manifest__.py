@@ -44,7 +44,8 @@ Long description of module's purpose
         'views/view_picking_list.xml',
         'views/stock_picking_type_kanban_custom.xml',
         'views/stock_picking_type_action_custom.xml',
-        'views/stock_picking_type_menu_add.xml',        
+        'views/stock_picking_type_menu_add.xml',
+        'views/stock_backorder_confirmation_oos_view.xml',        
     ],
     # only loaded in demonstration mode
     'demo': [
