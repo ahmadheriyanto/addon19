@@ -27,6 +27,13 @@ class ResConfigSettings(models.TransientModel):
         help="Company-level default operation type for Out of Stock",
     )
 
+    fulfillment_priority_cutoff_time = fields.Float(
+        related='company_id.fulfillment_priority_cutoff_time',
+        string='Priority Cut-off Time',
+        readonly=False,
+        help="Define cut-off time for Priority picking, reset to draft if more than the time setting.",
+    )
+
     # Company-level transporter category exposed in settings for easy configuration
     fulfillment_transporter_category_id = fields.Many2one(
         'res.partner.category',
@@ -77,6 +84,35 @@ class ResConfigSettings(models.TransientModel):
             'params': {
                 'title': 'Refresh Courier Scoring',
                 'message': 'Courier scoring refreshed for all partners.',
+                'sticky': False,
+            },
+        }
+
+    def action_run_reset_priority_pickings(self):
+        """
+        Called from res.config.settings (Run manually button).
+        Calls the stock.picking model method that resets priority pickings based on company cutoff.
+        Returns a client notification action.
+        """
+        # Call the worker method as sudo to ensure the operation can update pickings even if a non-admin triggers it.
+        result = self.env['stock.picking'].sudo().reset_priority_pickings_based_on_cutoff()
+
+        # result is expected to be a dict with reset_count and reset_ids as implemented.
+        reset_count = 0
+        if isinstance(result, dict):
+            reset_count = int(result.get('reset_count', 0))
+
+        if reset_count:
+            message = f"Reset {reset_count} pickings to draft."
+        else:
+            message = "No pickings were reset."
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Reset Priority Pickings',
+                'message': message,
                 'sticky': False,
             },
         }

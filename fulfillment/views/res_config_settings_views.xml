@@ -46,6 +46,18 @@
                 <field name="fulfillment_courier_label_medium"/>
                 <field name="fulfillment_courier_label_priority"/>
               </group>
+              <group string="Cut-off time for Priority Picking">
+                <field name="fulfillment_priority_cutoff_time" widget="float_time"/>
+                <!-- NEW: Manual run button to trigger reset_priority_pickings_based_on_cutoff -->
+                <div class="o_setting_box">
+                  <group>
+                    <button name="action_run_reset_priority_pickings"
+                            type="object"
+                            string="Run manually"
+                            class="btn btn-primary"/>
+                  </group>
+                </div>
+              </group>
             </div>
           </block>
         </app>

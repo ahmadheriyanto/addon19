@@ -1,4 +1,5 @@
-from odoo import models, fields
+from odoo import models, fields, api
+from odoo.exceptions import UserError, ValidationError
 
 class ResCompany(models.Model):
     _inherit = 'res.company'
@@ -20,6 +21,35 @@ class ResCompany(models.Model):
         string='Default Operation Type for OOS',
         help="Define default operation type for Pick as Out of Stock (company-level).",
     )
+
+    fulfillment_priority_cutoff_time = fields.Float(
+        string='Priority Cut-off Time',
+        help="Define cut-off time for Priority picking, reset to draft if more than the time setting.",
+    )
+
+    @api.constrains('fulfillment_priority_cutoff_time')
+    def _check_priority_cutoff_time(self):
+        for rec in self:
+            val = rec.fulfillment_priority_cutoff_time
+            if val is None:
+                continue
+            # disallow negative and values >= 24 (prevents entries like 27.00)
+            if val < 0 or val >= 24.0:
+                raise ValidationError(
+                    "Priority Cut-off Time must be between 00:00 and 23:59 (use 0.00 - 23.99 hours)."
+                )
+
+    @api.onchange('fulfillment_priority_cutoff_time')
+    def _onchange_priority_cutoff_time(self):
+        for rec in self:
+            val = rec.fulfillment_priority_cutoff_time
+            if val is not None and val >= 24.0:
+                return {
+                    'warning': {
+                        'title': 'Invalid time',
+                        'message': 'Priority Cut-off Time must be less than 24:00 (00:00-23:59).',
+                    }
+                }
 
     # Configurable "Transporter" partner category used by courier scoring logic.
     # Admins can pick which partner.category acts as the special category (previously hard-coded id 4).
