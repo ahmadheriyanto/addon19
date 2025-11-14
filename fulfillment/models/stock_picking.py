@@ -109,13 +109,38 @@ class StockPicking(models.Model):
         return super(StockPicking, self).copy(default=default)
 
     @api.model
-    def reset_priority_pickings_based_on_cutoff(self):
+    def reset_priority_pickings_based_on_cutoff(self, include_only_today=True):
+        """
+        Reset 'ready' priority pickings to draft when Odoo current time-of-day (local to env.user)
+        is past the company cutoff (fulfillment_priority_cutoff_time).
+
+        Behavior:
+        - For each company:
+          - read pick_type = fulfillment_default_operation_type_pick_id
+          - read priority_label = fulfillment_courier_label_priority
+          - read cutoff_hours = fulfillment_priority_cutoff_time (float hours, 0..24)
+        - Search pickings matching that company, picking_type, state='ready', courier_priority == priority_label.
+        - Determine Odoo "current time" in the user's timezone via fields.Datetime.context_timestamp.
+          (This uses the current env.user timezone; a cron runs as the system user, so the result
+          depends on that user's timezone. If you need company-specific timezone handling, we can
+          adapt.)
+        - If current_time_of_day (hours float) > cutoff_hours, reset matching pickings to 'draft'.
+        - If include_only_today is True, only pickings with scheduled_date on the same local date
+          as the current time will be considered (this uses scheduled_date only to compare the date,
+          not the time-of-day). Set include_only_today=False to consider all matching pickings.
+        """
         Picking = self.env['stock.picking']
         Company = self.env['res.company']
         user = self.env.user
 
         total_reset = 0
         reset_ids = []
+
+        # compute current local datetime once per call (in env.user timezone)
+        now_utc = fields.Datetime.now()  # aware UTC string/datetime
+        now_local = fields.Datetime.context_timestamp(user, now_utc)
+        curr_hours = now_local.hour + (now_local.minute / 60.0) + (now_local.second / 3600.0)
+
         for company in Company.search([]):
             pick_type = company.fulfillment_default_operation_type_pick_id
             priority_label = company.fulfillment_courier_label_priority
@@ -123,8 +148,18 @@ class StockPicking(models.Model):
 
             # Skip companies with incomplete configuration
             if not pick_type or not priority_label or cutoff_hours is None:
-                _logger.debug("Fulfillment: skipping company %s because of missing config (pick_type=%s, priority_label=%s, cutoff=%s)",
-                              company.name, bool(pick_type), bool(priority_label), cutoff_hours)
+                _logger.debug(
+                    "Fulfillment: skipping company %s because of missing config (pick_type=%s, priority_label=%s, cutoff=%s)",
+                    company.name, bool(pick_type), bool(priority_label), cutoff_hours
+                )
+                continue
+
+            # If current time is not yet past cutoff, nothing to do for this run
+            if curr_hours <= float(cutoff_hours):
+                _logger.debug(
+                    "Fulfillment: current time %s (hours=%.3f) has not passed cutoff %.3f for company %s; skipping",
+                    now_local.time(), curr_hours, float(cutoff_hours), company.name
+                )
                 continue
 
             # domain: picking_type, state==ready, courier_priority matching label, company
@@ -133,41 +168,46 @@ class StockPicking(models.Model):
                 ('state', '=', 'ready'),
                 ('courier_priority', '=', priority_label),
                 ('company_id', '=', company.id),
-                ('scheduled_date', '!=', False),
             ]
             pickings = Picking.search(domain)
             if not pickings:
+                _logger.debug("Fulfillment: no matching pickings for company %s", company.name)
                 continue
 
+            # Optionally restrict to pickings scheduled for the same local date as now_local.
+            # This uses scheduled_date only to compare the date, not the scheduled time-of-day.
             to_reset = []
-            for pick in pickings:
-                try:
-                    # scheduled_date is a UTC datetime string/aware datetime; convert to user's tz for comparing time-of-day
-                    sched_dt = pick.scheduled_date
-                    if not sched_dt:
+            if include_only_today:
+                for p in pickings:
+                    if not p.scheduled_date:
+                        # treat no-scheduled-date pickings as eligible (change if you prefer to exclude them)
+                        to_reset.append(p.id)
                         continue
-                    local_dt = fields.Datetime.context_timestamp(user, sched_dt)
-                    # derive hours as float, e.g. 13.5 for 13:30
-                    sched_hours = local_dt.hour + (local_dt.minute / 60.0) + (local_dt.second / 3600.0)
+                    try:
+                        p_local_dt = fields.Datetime.context_timestamp(user, p.scheduled_date)
+                        if p_local_dt.date() == now_local.date():
+                            to_reset.append(p.id)
+                    except Exception:
+                        # If conversion failed, include the picking to be safe and log the issue
+                        _logger.exception("Failed to convert scheduled_date for picking %s; including in reset", p.id)
+                        to_reset.append(p.id)
+            else:
+                to_reset = pickings.ids
 
-                    # If scheduled time-of-day is strictly greater than cutoff, reset to draft
-                    if sched_hours > float(cutoff_hours):
-                        to_reset.append(pick.id)
-                except Exception as e:
-                    _logger.exception("Error while evaluating picking %s for cutoff: %s", pick.id, e)
+            if not to_reset:
+                _logger.debug("Fulfillment: no pickings to reset for company %s after date filter", company.name)
+                continue
 
-            if to_reset:
-                # Use sudo() when writing to avoid access rights problems from server action.
-                try:
-                    Picking.browse(to_reset).sudo().write({'state': 'draft'})
-                    total_reset += len(to_reset)
-                    reset_ids.extend(to_reset)
-                    _logger.info("Fulfillment: reset %d pickings to draft for company %s (ids=%s)", len(to_reset), company.name, to_reset)
-                except Exception:
-                    _logger.exception("Failed to reset pickings to draft for company %s (ids=%s)", company.name, to_reset)
+            # Use sudo() when writing to avoid access rights issues from cron/server action
+            try:
+                Picking.browse(to_reset).sudo().write({'state': 'draft'})
+                total_reset += len(to_reset)
+                reset_ids.extend(to_reset)
+                _logger.info("Fulfillment: reset %d pickings to draft for company %s (ids=%s)", len(to_reset), company.name, to_reset)
+            except Exception:
+                _logger.exception("Failed to reset pickings to draft for company %s (ids=%s)", company.name, to_reset)
 
         _logger.info("Fulfillment: reset_priority_pickings_based_on_cutoff finished. total_reset=%d", total_reset)
-        # Return a simple summary that a server action can display
         return {
             'reset_count': total_reset,
             'reset_ids': reset_ids,
