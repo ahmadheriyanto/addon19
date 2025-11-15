@@ -27,6 +27,12 @@ class StockPickingType(models.Model):
     count_ready_medium = fields.Integer(string="Ready / Medium", compute="_compute_priority_counts")
     count_ready_instan = fields.Integer(string="Ready / Instan", compute="_compute_priority_counts")
 
+    # aggregate counters expected by UI
+    count_picking_ready = fields.Integer(string="Ready (total)", compute="_compute_priority_counts")
+    count_picking_waiting = fields.Integer(string="Waiting (total)", compute="_compute_priority_counts")
+    count_picking_late = fields.Integer(string="Late (total)", compute="_compute_priority_counts")
+    count_picking_backorders = fields.Integer(string="Backorders (total)", compute="_compute_priority_counts")
+
     count_backorder_reguler = fields.Integer(string="Backorder / Reguler", compute="_compute_priority_counts")
     count_backorder_medium = fields.Integer(string="Backorder / Medium", compute="_compute_priority_counts")
     count_backorder_instan = fields.Integer(string="Backorder / Instan", compute="_compute_priority_counts")
@@ -62,14 +68,22 @@ class StockPickingType(models.Model):
         - We fetch all pickings for the current picking types and iterate them.
         - courier_priority missing/False is treated as 'reguler'.
         - state values are mapped to the UI buckets.
+        - This compute MUST assign values for every computed field on every record in self
+          to avoid the ValueError: 'Compute method failed to assign ...'.
         """
         Picking = self.env['stock.picking']
 
-        # initialize zero values for all records
+        # initialize zero values for all records (MUST set every computed field here)
         for rec in self:
+            # per-state × per-priority counters
             for state in ('draft', 'to_process', 'waiting', 'ready', 'backorder', 'done'):
                 for pr in ('reguler', 'medium', 'instan'):
                     setattr(rec, f'count_{state}_{pr}', 0)
+            # aggregate counters
+            rec.count_picking_ready = 0
+            rec.count_picking_waiting = 0
+            rec.count_picking_late = 0
+            rec.count_picking_backorders = 0
 
         if not self:
             return
@@ -105,6 +119,7 @@ class StockPickingType(models.Model):
         # fetch pickings for these picking_type_ids in one query
         pickings = Picking.search([('picking_type_id', 'in', self.ids)])
         if not pickings:
+            # we've already set zeros for all recs above, so safe to return
             return
 
         # map rec by id for quick lookup
@@ -134,9 +149,29 @@ class StockPickingType(models.Model):
                 curb = getattr(rec, bfield, 0) or 0
                 setattr(rec, bfield, curb + 1)
 
-        # Note: done/other states have been updated by iteration above.
+        # Compute "late" counts efficiently via read_group: scheduled_date < now and not done/cancel
+        try:
+            now_dt = fields.Datetime.now()
+            late_grouped = Picking.read_group(
+                [('picking_type_id', 'in', self.ids),
+                 ('scheduled_date', '<', now_dt),
+                 ('state', 'not in', ['done', 'cancel'])],
+                ['picking_type_id'],
+                ['picking_type_id']
+            )
+            late_counts = {g['picking_type_id'][0]: g['picking_type_id_count'] for g in late_grouped if g.get('picking_type_id')}
+        except Exception:
+            _logger.exception("Failed to compute late picking counts via read_group")
+            late_counts = {}
 
-    
+        # Final pass: ensure aggregate counters are consistent for all recs
+        for rec in self:
+            rec.count_picking_ready = (rec.count_ready_reguler or 0) + (rec.count_ready_medium or 0) + (rec.count_ready_instan or 0)
+            rec.count_picking_waiting = (rec.count_waiting_reguler or 0) + (rec.count_waiting_medium or 0) + (rec.count_waiting_instan or 0)
+            # sum backorder counters across priorities
+            rec.count_picking_backorders = (rec.count_backorder_reguler or 0) + (rec.count_backorder_medium or 0) + (rec.count_backorder_instan or 0)
+            rec.count_picking_late = late_counts.get(rec.id, 0)
+
     def action_open_pickings(self):
         """Return an action opening stock.picking filtered by picking type, state and priority.
 
