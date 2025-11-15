@@ -1,18 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <!-- Inherit the core stock.backorder.confirmation view and add an OOS button.
-       The button is invisible by default and becomes visible when the transient
-       has show_oos = True (populated via action context default_show_oos).
-       This keeps the change minimal and controlled via context.
+  <!-- Inherit the stock backorder confirmation wizard view.
+       Behavior:
+       - when show_oos == True -> show OOS (action_process_oos), hide Create Backorder & No Backorder
+       - when show_oos == False -> hide OOS, show the default buttons
+       Note: Use modifiers (JSON) instead of deprecated attrs/states (Odoo >=17).
   -->
   <record id="view_backorder_confirmation_oos" model="ir.ui.view">
-    <field name="name">stock.view_backorder_confirmation.inherit.fulfillment.oos</field>
+    <field name="name">stock.backorder.confirmation.form.inherit.oos.toggle</field>
     <field name="model">stock.backorder.confirmation</field>
     <field name="inherit_id" ref="stock.view_backorder_confirmation"/>
     <field name="arch" type="xml">
-      <xpath expr="//button[@name='process_cancel_backorder']" position="after">
+      <!-- Ensure the show_oos field is present in the form so modifiers can evaluate it -->
+      <xpath expr="//form" position="inside">
         <field name="show_oos" invisible="1"/>
-        <button name="action_process_oos" type="object" string="OOS" invisible="show_oos == False"/>
+      </xpath>
+
+      <!-- Add the OOS button (visible only when show_oos == True).
+           Ensure the method action_process_oos exists on stock.backorder.confirmation. -->
+      <xpath expr="//footer" position="inside">
+        <button name="action_process_oos"
+                type="object"
+                string="OOS"
+                class="btn-primary"
+                invisible="show_oos == False"/>
+      </xpath>
+
+      <!-- Hide "Create Backorder" when show_oos == True by targeting the real button name 'process' -->
+      <xpath expr="//footer/button[@name='process']" position="attributes">
+        <attribute name="invisible">show_oos == True</attribute>
+      </xpath>
+
+      <!-- Hide "No Backorder" when show_oos == True by targeting the real button name 'process_cancel_backorder' -->
+      <xpath expr="//footer/button[@name='process_cancel_backorder']" position="attributes">
+        <attribute name="invisible">show_oos == True</attribute>
       </xpath>
     </field>
   </record>

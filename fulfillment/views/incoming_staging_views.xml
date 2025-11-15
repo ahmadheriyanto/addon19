@@ -60,7 +60,7 @@
                                 <list editable="bottom" string="Product Lines">
                                     <field name="product_no"/>
                                     <field name="product_nanme"/>
-                                    <field name="product_qty"/>
+                                    <field name="product_qty" widget="integer"/>
                                     <field name="product_uom"/>
                                     <field name="tracking_type"/>
                                     <field name="tracking_no"/>
@@ -70,7 +70,7 @@
                                         <group>
                                             <field name="product_no"/>
                                             <field name="product_nanme"/>
-                                            <field name="product_qty"/>
+                                            <field name="product_qty" widget="integer"/>
                                             <field name="product_uom"/>
                                         </group>
                                         <group>
@@ -102,7 +102,7 @@
             <list string="Incoming Staging Product" create="true" edit="true" delete="true">
                 <field name="product_no"/>
                 <field name="product_nanme"/>
-                <field name="product_qty"/>
+                <field name="product_qty" widget="float" options="{'precision': 'Product Unit of Measure'}"/>
                 <field name="product_uom"/>
                 <field name="tracking_type"/>
                 <field name="tracking_no"/>
