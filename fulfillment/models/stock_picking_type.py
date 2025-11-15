@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 # Integrates with stock.picking where courier_priority is a Char related field.
-# Computes counts per picking type x (state × priority string) using safe search_count queries.
-from odoo import api, fields, models
+# Computes counts per picking type x (state × priority string) using robust grouping.
+from odoo import api, fields, models, _
+from odoo.tools.safe_eval import safe_eval
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class StockPickingType(models.Model):
@@ -31,17 +35,37 @@ class StockPickingType(models.Model):
     count_done_medium = fields.Integer(string="Done / Medium", compute="_compute_priority_counts")
     count_done_instan = fields.Integer(string="Done / Instan", compute="_compute_priority_counts")
 
+    # overall record count per picking.type (stored); keeps your existing badge working
+    picking_count = fields.Integer(
+        string="Pickings",
+        compute="_compute_picking_count",
+        store=True,
+        readonly=True,
+        help="Total number of stock.picking records for this picking type."
+    )
+
+    @api.depends()
+    def _compute_picking_count(self):
+        """Compute the total number of pickings per picking.type using read_group for performance."""
+        Picking = self.env['stock.picking']
+        if not self:
+            return
+        grouped = Picking.read_group([('picking_type_id', 'in', self.ids)], ['picking_type_id'], ['picking_type_id'])
+        counts = {g['picking_type_id'][0]: g['picking_type_id_count'] for g in grouped if g.get('picking_type_id')}
+        for rec in self:
+            rec.picking_count = counts.get(rec.id, 0)
+
     @api.depends()
     def _compute_priority_counts(self):
-        """Compute counts for each picking.type by state and courier_priority (string based).
+        """Robust compute of per-state × per-priority counts.
 
-        This implementation uses search_count per combination and normalizes courier_priority
-        string values to the three buckets: 'reguler', 'medium', 'instan'.
+        - We fetch all pickings for the current picking types and iterate them.
+        - courier_priority missing/False is treated as 'reguler'.
+        - state values are mapped to the UI buckets.
         """
         Picking = self.env['stock.picking']
-        picking_fields = Picking._fields
 
-        # initialize zero values
+        # initialize zero values for all records
         for rec in self:
             for state in ('draft', 'to_process', 'waiting', 'ready', 'backorder', 'done'):
                 for pr in ('reguler', 'medium', 'instan'):
@@ -50,7 +74,7 @@ class StockPickingType(models.Model):
         if not self:
             return
 
-        # Normalization from courier_priority text -> pkey
+        # normalization from courier_priority text -> pkey
         def normalize_priority_text(text):
             if not text:
                 return None
@@ -61,7 +85,6 @@ class StockPickingType(models.Model):
                 return 'medium'
             if 'inst' in t or 'instant' in t:
                 return 'instan'
-            # exact matches fallback
             if t in ('reguler', 'regular'):
                 return 'reguler'
             if t == 'medium':
@@ -70,98 +93,50 @@ class StockPickingType(models.Model):
                 return 'instan'
             return None
 
-        # If courier_priority exists as a field on stock.picking, gather the distinct texts
-        use_priority_field = 'courier_priority' in picking_fields
-
-        # Precollect distinct priority strings for these picking types (optional, reduces empty searches)
-        priority_keys_present = set()
-        if use_priority_field:
-            # collect unique values (could be many; it's just to avoid many empty search_count)
-            pr_vals = Picking.search([('picking_type_id', 'in', self.ids)], limit=0).mapped('courier_priority')
-            # If the above returns a generator or list, ensure iteration; sometimes limit=0 returns [], keep safe
-            for v in set(pr_vals or []):
-                pkey = normalize_priority_text(v)
-                if pkey:
-                    priority_keys_present.add(pkey)
-
-        # mapping for Odoo states -> our suffix names
+        # map stock.picking.state -> our suffix keys
         state_map = {
             'draft': 'draft',
-            'confirmed': 'to_process',
+            'confirmed': 'to_process',  # confirmed = To Process
             'waiting': 'waiting',
-            'assigned': 'ready',
+            'assigned': 'ready',        # assigned = Ready
             'done': 'done',
         }
 
-        # For each picking type, count per state × priority key
-        for rec in self:
-            base = [('picking_type_id', '=', rec.id)]
-            if use_priority_field:
-                # iterate priority buckets (always include the three keys)
-                for pkey in ('reguler', 'medium', 'instan'):
-                    # build domain for priority: match courier_priority strings that map to this pkey
-                    # To avoid loading all string variants, we look for known strings:
-                    # - If we earlier found present keys, we only count those keys; otherwise, perform domain with ilike filters as fallback.
-                    ids_present = priority_keys_present
-                    # We can search directly by courier_priority being ilike certain tokens for fallback
-                    for state_raw, suffix in state_map.items():
-                        # Build domain
-                        domain = list(base) + [('state', '=', state_raw)]
-                        # If we have priority examples present, filter by those texts
-                        if ids_present:
-                            # count by matching texts that normalized to pkey
-                            # build a list of original texts that matched pkey
-                            texts = [v for v in set(Picking.search(base + [('courier_priority', '!=', False)]).mapped('courier_priority') or []) if normalize_priority_text(v) == pkey]
-                            if texts:
-                                # match any of exact texts
-                                domain.append(('courier_priority', 'in', texts))
-                            else:
-                                # nothing to match: 0
-                                cnt = 0
-                                setattr(rec, f'count_{suffix}_{pkey}', getattr(rec, f'count_{suffix}_{pkey}', 0) + cnt)
-                                continue
-                        else:
-                            # fallback: use ilike on tokens
-                            if pkey == 'reguler':
-                                domain.append(('courier_priority', 'ilike', 'regul'))
-                            elif pkey == 'medium':
-                                domain.append(('courier_priority', 'ilike', 'med'))
-                            else:
-                                domain.append(('courier_priority', 'ilike', 'inst'))
-                        cnt = Picking.search_count(domain)
-                        setattr(rec, f'count_{suffix}_{pkey}', getattr(rec, f'count_{suffix}_{pkey}', 0) + cnt)
+        # fetch pickings for these picking_type_ids in one query
+        pickings = Picking.search([('picking_type_id', 'in', self.ids)])
+        if not pickings:
+            return
 
-                    # backorders per priority
-                    if 'backorder_id' in picking_fields:
-                        domain_b = list(base) + [('backorder_id', '!=', False)]
-                        if ids_present:
-                            texts = [v for v in set(Picking.search(base + [('courier_priority', '!=', False)]).mapped('courier_priority') or []) if normalize_priority_text(v) == pkey]
-                            if texts:
-                                domain_b.append(('courier_priority', 'in', texts))
-                                bcnt = Picking.search_count(domain_b)
-                            else:
-                                bcnt = 0
-                        else:
-                            if pkey == 'reguler':
-                                domain_b.append(('courier_priority', 'ilike', 'regul'))
-                            elif pkey == 'medium':
-                                domain_b.append(('courier_priority', 'ilike', 'med'))
-                            else:
-                                domain_b.append(('courier_priority', 'ilike', 'inst'))
-                            bcnt = Picking.search_count(domain_b)
-                        setattr(rec, f'count_backorder_{pkey}', getattr(rec, f'count_backorder_{pkey}', 0) + bcnt)
-            else:
-                # priority not present: attribute everything to reguler
-                for state_raw, suffix in state_map.items():
-                    cnt = Picking.search_count(base + [('state', '=', state_raw)])
-                    setattr(rec, f'count_{suffix}_reguler', getattr(rec, f'count_{suffix}_reguler', 0) + cnt)
-                if 'backorder_id' in picking_fields:
-                    bcnt = Picking.search_count(base + [('backorder_id', '!=', False)])
-                    rec.count_backorder_reguler = bcnt
+        # map rec by id for quick lookup
+        rec_by_id = {rec.id: rec for rec in self}
 
-    # (Assumes your computed count fields are already defined elsewhere in the module.)
-    # This method is called by the kanban anchors (type="object") and returns an ir.actions.act_window
-    # showing stock.picking records filtered according to the clicked cell.
+        # iterate pickings and increment counters
+        for p in pickings:
+            ptype = p.picking_type_id and p.picking_type_id.id
+            if not ptype or ptype not in rec_by_id:
+                continue
+            rec = rec_by_id[ptype]
+
+            # normalize priority: treat missing/False/unknown as 'reguler'
+            pkey = normalize_priority_text(p.courier_priority) or 'reguler'
+
+            # map state, ignore unknown states
+            mapped = state_map.get(p.state)
+            if mapped:
+                field = f'count_{mapped}_{pkey}'
+                # read current, increment by 1
+                cur = getattr(rec, field, 0) or 0
+                setattr(rec, field, cur + 1)
+
+            # backorder handling: count separately if backorder_id present on the picking
+            if hasattr(p, 'backorder_id') and p.backorder_id:
+                bfield = f'count_backorder_{pkey}'
+                curb = getattr(rec, bfield, 0) or 0
+                setattr(rec, bfield, curb + 1)
+
+        # Note: done/other states have been updated by iteration above.
+
+    
     def action_open_pickings(self):
         """Return an action opening stock.picking filtered by picking type, state and priority.
 
@@ -177,7 +152,7 @@ class StockPickingType(models.Model):
 
         domain = [('picking_type_id', '=', self.id)]
 
-        # Map UI buckets to real stock.picking.state values when needed
+        # Backorder special handling
         if state_key == 'backorder':
             domain.append(('backorder_id', '!=', False))
         else:
@@ -192,10 +167,11 @@ class StockPickingType(models.Model):
             if mapped_state:
                 domain.append(('state', '=', mapped_state))
 
-        # Priority filter (courier_priority is stored as a Char related field in your setup)
+        # Priority filter: treat missing/False courier_priority as 'reguler'
         if priority_key:
             if priority_key == 'reguler':
-                domain.append(('courier_priority', 'ilike', 'regul'))
+                # include records with no courier_priority as 'reguler' + the usual ilike match
+                domain += ['|', ('courier_priority', '=', False), ('courier_priority', 'ilike', 'regul')]
             elif priority_key == 'medium':
                 domain.append(('courier_priority', 'ilike', 'med'))
             elif priority_key == 'instan':
@@ -209,13 +185,40 @@ class StockPickingType(models.Model):
                 'type': 'ir.actions.act_window',
                 'name': _('Transfer Orders'),
                 'res_model': 'stock.picking',
-                'view_mode': 'kanban,tree,form',
-                'target': 'current',
+                'view_mode': 'tree,form',
+                'context': {},
             }
 
-        action.update({
-            'domain': domain,
-            # Optionally set a context to prefill new records etc:
-            'context': {},
-        })
+        # The action['context'] returned by read() may be:
+        # - a dict (already safe)
+        # - a string representation of a dict that references names like allowed_company_ids
+        # We attempt a safe evaluation and, if needed, provide a minimal globals mapping
+        # for commonly used names (e.g. allowed_company_ids) so evaluation succeeds.
+        action_context_raw = action.get('context') or {}
+        action_context = {}
+        if isinstance(action_context_raw, str):
+            # provide common names that may appear in stored contexts
+            eval_globals = {
+                'allowed_company_ids': getattr(self.env.user, 'company_ids', self.env.user.company_id).ids if hasattr(self.env.user, 'company_ids') else [self.env.company.id],
+                'uid': self.env.uid,
+            }
+            try:
+                # safe_eval may raise if unknown names are used; catch and fallback
+                action_context = safe_eval(action_context_raw, eval_globals)
+                if not isinstance(action_context, dict):
+                    # if evaluation succeeded but returned e.g. a list, coerce to dict safely
+                    action_context = dict(action_context) if isinstance(action_context, (list, tuple)) else {}
+            except Exception:
+                _logger.exception("Failed to safe_eval action context; falling back to empty dict. Raw context: %r", action_context_raw)
+                action_context = {}
+        elif isinstance(action_context_raw, dict):
+            action_context = dict(action_context_raw)
+        else:
+            action_context = {}
+
+        # Merge contexts: action context first, then the click ctx overrides
+        action_context.update(ctx)
+        action['context'] = action_context
+
+        action['domain'] = domain
         return action

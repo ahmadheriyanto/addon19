@@ -16,6 +16,9 @@
           <field name="kanban_dashboard_graph"/>
           <field name="show_picking_type" invisible="1"/>
 
+          <!-- NEW: overall record count requested by view -->
+          <field name="picking_count"/>
+
           <!-- computed statistic fields -->
           <field name="count_draft_reguler"/>
           <field name="count_draft_medium"/>
@@ -39,11 +42,22 @@
           <templates>
             <t t-name="card">
               <div t-if="record.show_picking_type.raw_value" name="stock_picking" class="o_kanban_record_content p-3">
-                <!-- title (clickable) -->
-                <a t-if="!selection_mode" type="object" name="get_stock_picking_action_picking_type">
-                  <field class="fw-bold fs-5" name="name"/>
-                </a>
-                <field t-if="selection_mode" class="fw-bold fs-5" name="name"/>
+                <!-- title (clickable) with total record count shown top-left -->
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div>
+                    <a t-if="!selection_mode" type="object" name="get_stock_picking_action_picking_type">
+                      <field class="fw-bold fs-5 d-inline-block me-2" name="name"/>
+                    </a>
+                    <field t-if="selection_mode" class="fw-bold fs-5 d-inline-block me-2" name="name"/>
+                    <!-- show total pickings next to name -->
+                    <span class="badge bg-light text-dark small"
+                          t-att-title="'Total pickings: %s' % (record.picking_count.raw_value or 0)">
+                      <t t-esc="record.picking_count.raw_value or 0"/>
+                    </span>
+                  </div>
+                  <!-- optional extra controls placeholder -->
+                  <div/>
+                </div>
 
                 <!-- Card container -->
                 <div style="margin-top:12px;padding:12px;border-radius:10px;background:#0f1720;color:#ffffff;box-shadow:0 6px 18px rgba(2,6,23,0.6);">
