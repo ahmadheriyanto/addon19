@@ -90,6 +90,33 @@ class IncomingStaging(models.Model):
         help='Related from principal_courier_id.courier_scoring_label'
     )
 
+    courier_sort_score = fields.Integer(
+        string='Courier Sort Score',
+        compute='_compute_courier_sort_score',
+        store=True,
+        index=True,
+        readonly=True,
+        help='Helper field used to sort incoming staging records by resolved courier scoring. '
+             'If no courier resolved, set to 0 so it sorts before known couriers when ascending.'
+    )
+
+    @api.depends('principal_courier_id', 'principal_courier_id.courier_scoring')
+    def _compute_courier_sort_score(self):
+        """Set courier_sort_score from principal_courier_id.courier_scoring.
+        If no principal courier is resolved, set score = 0 (highest priority when sorting asc).
+        """
+        for rec in self:
+            pc = rec.principal_courier_id
+            if pc and pc.courier_scoring not in (False, None):
+                try:
+                    rec.courier_sort_score = int(pc.courier_scoring)
+                except Exception:
+                    # defensive fallback: if conversion fails, treat as 0
+                    rec.courier_sort_score = 0
+            else:
+                # If no principal courier found, use 0 as requested
+                rec.courier_sort_score = 0
+
     principal_customer_name = fields.Char(string="Customer Name")
     principal_customer_address = fields.Char(string="Customer Address")
 
