@@ -15,6 +15,7 @@ class ResCompany(models.Model):
         string='Default Operation Type for Pick',
         help="Define default operation type for API as pick activity (company-level)",
     )
+    fulfillment_do_not_create_pick = fields.Boolean(string="Do not create pick automatically")
 
     fulfillment_default_operation_type_oos_id = fields.Many2one(
         'stock.picking.type',

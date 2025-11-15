@@ -16,6 +16,11 @@
             <div class="o_setting_box">
               <group>
                 <field name="fulfillment_default_operation_type_pick_id"/>
+                <div class="o_setting_box">
+                  <group>
+                    <field name="fulfillment_do_not_create_pick"/>
+                  </group>
+                </div>                
               </group>
             </div>
             <div class="o_setting_box">

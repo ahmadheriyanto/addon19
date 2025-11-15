@@ -18,6 +18,12 @@ class ResConfigSettings(models.TransientModel):
         readonly=False,
         help="Company-level default operation type for pick",
     )
+    
+    fulfillment_do_not_create_pick = fields.Boolean(
+        string="Do not create pick automatically",
+        related='company_id.fulfillment_do_not_create_pick',
+        readonly=False,
+        )
 
     fulfillment_default_operation_type_oos_id = fields.Many2one(
         'stock.picking.type',
