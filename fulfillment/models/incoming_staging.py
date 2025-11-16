@@ -36,7 +36,8 @@ class IncomingStaging(models.Model):
                             selection=[
                                 ('', ' '),
                                 ('inbound', 'Inbound Order'),
-                                ('forder', 'Fulfillment Order')
+                                ('forder', 'Fulfillment Order'),
+                                ('return', 'Return Order')
                             ], default='', required=True)
     datetime_string = fields.Char(string="Date (yyyy-mm-ddTHH:MM:SS)", required=True)
     products = fields.One2many(
@@ -56,7 +57,8 @@ class IncomingStaging(models.Model):
                                                             # Incoming Staging sudah menjadi transfer Order dengan picking type = pack, belum validate
                                   ('deliver', 'Shipping'),  # Incoming Staging sudah menjadi transfer Order dengan picking type = pack, sudah validate / Done
                                                             # Incoming Staging sudah menjadi transfer Order dengan picking type = Delivery Order, belum validate
-                                  ('finish', 'Finish')      # Incoming Staging sudah menjadi transfer Order dengan picking type = Delivery Order, sudah validate / Done
+                                  ('finish', 'Finish'),     # Incoming Staging sudah menjadi transfer Order dengan picking type = Delivery Order, sudah validate / Done
+                                  ('return', 'Return')
                               ], default='open', required=True)
 
     partner_id = fields.Many2one(

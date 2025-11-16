@@ -33,6 +33,14 @@ class ResConfigSettings(models.TransientModel):
         help="Company-level default operation type for Out of Stock",
     )
 
+    fulfillment_default_operation_type_return_id = fields.Many2one(
+        'stock.picking.type',
+        related='company_id.fulfillment_default_operation_type_return_id',
+        string='Default Operation Type for Return',
+        readonly=False,
+        help="Company-level default operation type for Return",
+    )
+
     fulfillment_priority_cutoff_time = fields.Float(
         related='company_id.fulfillment_priority_cutoff_time',
         string='Priority Cut-off Time',

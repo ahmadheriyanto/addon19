@@ -62,7 +62,7 @@ class IncomingStagingAPI(http.Controller):
                 )
 
         # Validate type
-        if data['type'] not in ('inbound', 'forder'):
+        if data['type'] not in ('inbound', 'forder', 'return'):
             return Response(
                 json.dumps({'error': "Invalid 'type' value. Expected 'inbound' or 'forder'."}),
                 status=400, content_type='application/json;charset=utf-8', headers=headers

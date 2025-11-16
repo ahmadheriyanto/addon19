@@ -23,6 +23,12 @@ class ResCompany(models.Model):
         help="Define default operation type for Pick as Out of Stock (company-level).",
     )
 
+    fulfillment_default_operation_type_return_id = fields.Many2one(
+        'stock.picking.type',
+        string='Default Operation Type for Return',
+        help="Define default operation type for API as return activity (company-level)",
+    )
+
     fulfillment_priority_cutoff_time = fields.Float(
         string='Priority Cut-off Time',
         help="Define cut-off time for Priority picking, reset to draft if more than the time setting.",
