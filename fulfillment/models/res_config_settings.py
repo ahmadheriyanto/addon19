@@ -6,9 +6,17 @@ class ResConfigSettings(models.TransientModel):
     fulfillment_default_operation_type_receipt_id = fields.Many2one(
         'stock.picking.type',
         related='company_id.fulfillment_default_operation_type_receipt_id',
-        string='Default Operation Type for Receipt',
+        string='Default Operation Type for Receipt (B2B)',
         readonly=False,
-        help="Company-level default operation type for receipt",
+        help="Company-level default operation type for receipt (B2B)",
+    )
+
+    fulfillment_default_operation_type_receipt2_id = fields.Many2one(
+        'stock.picking.type',
+        related='company_id.fulfillment_default_operation_type_receipt2_id',
+        string='Default Operation Type for Receipt (B2C)',
+        readonly=False,
+        help="Company-level default operation type for receipt (B2C)",
     )
 
     fulfillment_default_operation_type_pick_id = fields.Many2one(

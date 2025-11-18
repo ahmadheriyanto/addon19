@@ -6,8 +6,14 @@ class ResCompany(models.Model):
 
     fulfillment_default_operation_type_receipt_id = fields.Many2one(
         'stock.picking.type',
-        string='Default Operation Type for Receipt',
-        help="Define default operation type for API as receipt activity (company-level)",
+        string='Default Operation Type for Receipt (B2B)',
+        help="Define default operation type for API as receipt (B2B) activity (company-level)",
+    )
+
+    fulfillment_default_operation_type_receipt2_id = fields.Many2one(
+        'stock.picking.type',
+        string='Default Operation Type for Receipt (B2C)',
+        help="Define default operation type for API as receipt (B2C) activity (company-level)",
     )
 
     fulfillment_default_operation_type_pick_id = fields.Many2one(

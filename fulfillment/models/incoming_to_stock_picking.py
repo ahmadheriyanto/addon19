@@ -629,6 +629,13 @@ class IncomingStagingStockReceipt(models.Model):
                     rec.sudo().write({'result_message': msg})
                     results.append({'staging_id': rec.id, 'note': 'skipped_not_open_or_not_inbound', 'state': rec.status, 'type': rec.type})
                     continue
+                
+                if not rec.partner_type:
+                    msg = f"Skipped staging {rec.id}: status={rec.status} type={rec.type} partner_type= Invalid"
+                    _logger.info(msg)
+                    rec.sudo().write({'result_message': msg})
+                    results.append({'staging_id': rec.id, 'note': 'skipped_not_open_or_not_inbound', 'state': rec.status, 'type': rec.type})
+                    continue
 
                 # Idempotency: return existing non-cancelled picking
                 existing = env['stock.picking'].search([('origin', '=', rec.transaction_no), ('state', '!=', 'cancel')], limit=1)
@@ -640,7 +647,11 @@ class IncomingStagingStockReceipt(models.Model):
                     continue
 
                 # Resolve picking type id from system parameter
-                param_val = self.env['ir.config_parameter'].sudo().get_param('fulfillment.operationtype.receipt_id')
+                param_val = False
+                if rec.partner_type == 'b2b':
+                    param_val = self.env['ir.config_parameter'].sudo().get_param('fulfillment.operationtype.receipt_id')
+                if rec.partner_type == 'b2c':
+                    param_val = self.env['ir.config_parameter'].sudo().get_param('fulfillment.operationtype.receipt2_id')
                 if not param_val:
                     raise ValidationError("Default receipt operation type is not configured (fulfillment.operationtype.receipt_id).")
                 try:

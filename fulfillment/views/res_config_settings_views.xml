@@ -15,6 +15,11 @@
             </div>
             <div class="o_setting_box">
               <group>
+                <field name="fulfillment_default_operation_type_receipt2_id"/>
+              </group>
+            </div>
+            <div class="o_setting_box">
+              <group>
                 <field name="fulfillment_default_operation_type_pick_id"/>
                 <div class="o_setting_box">
                   <group>

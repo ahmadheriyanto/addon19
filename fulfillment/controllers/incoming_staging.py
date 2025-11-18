@@ -34,8 +34,7 @@ class IncomingStagingAPI(http.Controller):
         {
           "transaction_no": "TRX-001",
           "type": "inbound" | "forder",
-          "datetime_string": "YYYY-MM-DDTHH:MM:SS",
-          "partner": {"id":123} OR {"email":"x@x.com"},
+          "datetime_string": "YYYY-MM-DDTHH:MM:SS",          
           "products": [ ... ],
           # The following fields are REQUIRED when type == "forder":
           "principal_courier": "Courier Name",
@@ -52,8 +51,15 @@ class IncomingStagingAPI(http.Controller):
                 status=400, content_type='application/json;charset=utf-8', headers=headers
             )
 
+        user = request.env.user
+        if not user.sudo().partner_id.parent_id:
+            return Response(
+                json.dumps({'error': 'Invalid API Key, it is not belong to any Principal.', 'details': str(e)}),
+                status=400, content_type='application/json;charset=utf-8', headers=headers
+            )
+
         # Required top-level fields (type may be 'inbound' or 'forder')
-        required = ['transaction_no', 'type', 'datetime_string', 'partner', 'products']
+        required = ['transaction_no', 'type', 'datetime_string', 'products']
         for f in required:
             if f not in data:
                 return Response(
@@ -173,25 +179,29 @@ class IncomingStagingAPI(http.Controller):
                         )
 
         # Resolve partner (id or email)
+        # partner = False
+        # partner_id = None
+        # partner_val = data.get('partner') or {}
+        # partner_model = request.env['res.partner'].sudo()
+        # if isinstance(partner_val, dict) and partner_val.get('id'):
+        #     partner = partner_model.search([('id', '=', int(partner_val.get('id')) )], limit=1)
+        #     if not partner:
+        #         return Response(json.dumps({'error': 'partner id not found'}),
+        #                         status=400, content_type='application/json;charset=utf-8', headers=headers)
+        #     partner_id = partner.id
+        # elif isinstance(partner_val, dict) and partner_val.get('email'):
+        #     partner = partner_model.search([('email', '=', partner_val.get('email'))], limit=1)
+        #     if not partner:
+        #         return Response(json.dumps({'error': 'partner email not found'}),
+        #                         status=400, content_type='application/json;charset=utf-8', headers=headers)
+        #     partner_id = partner.id
+        # else:
+        #     return Response(json.dumps({'error': 'partner must be an object with id or email'}),
+        #                     status=400, content_type='application/json;charset=utf-8', headers=headers)
         partner = False
-        partner_id = None
-        partner_val = data.get('partner') or {}
-        partner_model = request.env['res.partner'].sudo()
-        if isinstance(partner_val, dict) and partner_val.get('id'):
-            partner = partner_model.search([('id', '=', int(partner_val.get('id')) )], limit=1)
-            if not partner:
-                return Response(json.dumps({'error': 'partner id not found'}),
-                                status=400, content_type='application/json;charset=utf-8', headers=headers)
-            partner_id = partner.id
-        elif isinstance(partner_val, dict) and partner_val.get('email'):
-            partner = partner_model.search([('email', '=', partner_val.get('email'))], limit=1)
-            if not partner:
-                return Response(json.dumps({'error': 'partner email not found'}),
-                                status=400, content_type='application/json;charset=utf-8', headers=headers)
-            partner_id = partner.id
-        else:
-            return Response(json.dumps({'error': 'partner must be an object with id or email'}),
-                            status=400, content_type='application/json;charset=utf-8', headers=headers)
+        partner_id = user.sudo().partner_id.parent_id.id
+        partner_model = request.env['res.partner'].sudo()        
+        partner = partner_model.search([('id', '=', partner_id )], limit=1)    
 
         # Check user is member of partner
         user = request.env.user
@@ -241,6 +251,7 @@ class IncomingStagingAPI(http.Controller):
             'type': data['type'],
             'datetime_string': data['datetime_string'],
             'partner_id': partner_id,
+            'partner_type': partner.partner_type,
             'products': [(0, 0, pl) for pl in product_lines],
             'status': 'open',
         }
@@ -251,7 +262,7 @@ class IncomingStagingAPI(http.Controller):
             vals['principal_customer_name'] = (data.get('principal_customer_name') or '').strip()
             vals['principal_customer_address'] = (data.get('principal_customer_address') or '').strip()
 
-        staging_model = request.env['incoming_staging'].with_user(request.env.user.id)
+        staging_model = request.env['incoming_staging'].sudo()  #with_user(request.env.user.id)
         try:
             with request.env.cr.savepoint():
                 record = staging_model.create(vals)

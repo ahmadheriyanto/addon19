@@ -5,6 +5,9 @@
     <!-- Make sure this ref matches the partner form view in your Odoo 19 instance -->
     <field name="inherit_id" ref="base.view_partner_form"/>
     <field name="arch" type="xml">
+      <xpath expr="//field[@name='category_id']" position="before">
+        <field name="partner_type"/>
+      </xpath>
       <xpath expr="//field[@name='category_id']" position="after">
         <!-- ensure boolean is loaded in the form record -->
         <field name="show_courier_scoring" invisible="1"/>

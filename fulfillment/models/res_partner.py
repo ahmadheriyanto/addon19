@@ -29,6 +29,13 @@ class ResPartner(models.Model):
         help="Label based on courier_scoring; thresholds and labels are configurable per company in Settings > Fulfillment.",
     )
 
+    partner_type = fields.Selection(string="Partner Type",
+                              selection=[
+                                  ('', ''),
+                                  ('b2b', 'B2B'),
+                                  ('b2c', 'B2C')
+                              ], default='')
+
     @api.depends('category_id.courier_scoring', 'category_id', 'company_id.fulfillment_transporter_category_id')
     def _compute_courier_scoring(self):
         for partner in self:

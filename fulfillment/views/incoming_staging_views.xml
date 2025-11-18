@@ -8,7 +8,8 @@
             <list string="Incoming Staging" create="true" edit="true" delete="true" default_order="courier_sort_score desc">
                 <field name="transaction_no"/>
                 <field name="datetime_string"/>
-                <field name="partner_id"/>                
+                <field name="partner_id"/>  
+                <field name="partner_type"/>
                 <field name="type"/>
                 <field name="status"/>
                 <field name="principal_courier"/>
@@ -48,6 +49,7 @@
                         <group>
                             <field name="datetime_string"/>
                             <field name="partner_id"/>                            
+                            <field name="partner_type"/>
                             <field name="principal_customer_name"/>
                             <field name="principal_customer_address"/>
                         </group>

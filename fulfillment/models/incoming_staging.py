@@ -49,6 +49,14 @@ class IncomingStaging(models.Model):
     )
     status = fields.Selection(string="Status",
                               selection=[
+                                  ('open', 'Open'),
+                                  ('inbound', 'Inbound'),
+                                  ('pick', 'Picking'),
+                                  ('return', 'Return')
+                              ], default='open', required=True)
+
+    tracking_status = fields.Selection(string="Tracking Status",
+                              selection=[
                                   ('open', 'Open'),         # Incoming staging belum di buatkan transfer Order
                                   ('inbound', 'Inbound'),   # Incoming Staging sudah menjadi transfer Order dengan picking type = receipt, belum validate
                                   ('storage', 'Storage'),   # Incoming Staging sudah menjadi transfer Order dengan picking type = receipt, sudah validate / Done
@@ -68,6 +76,15 @@ class IncomingStaging(models.Model):
         ondelete='cascade',
         index=True
     )
+
+    partner_type = fields.Selection(string="Partner Type",
+            selection=[
+                ('', ''),
+                ('b2b', 'B2B'),
+                ('b2c', 'B2C')
+            ], 
+            default=''
+        )
 
     principal_courier = fields.Char(string="Courier")
 
