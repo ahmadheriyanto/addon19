@@ -256,7 +256,7 @@ class IncomingStagingAPI(http.Controller):
             'status': 'open',
         }
 
-        if data['type'] == 'forder':
+        if (data['type'] == 'forder') or (data['type'] == 'return'):
             # include the three principal fields (we validated their presence above)
             vals['principal_courier'] = (data.get('principal_courier') or '').strip()
             vals['principal_customer_name'] = (data.get('principal_customer_name') or '').strip()
