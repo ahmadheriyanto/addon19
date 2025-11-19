@@ -1,0 +1,30 @@
+<odoo>
+  <record id="view_picking_form_inherit_detailed_operations" model="ir.ui.view">
+    <field name="name">stock.picking.form.detailed.operations</field>
+    <field name="model">stock.picking</field>
+    <field name="inherit_id" ref="stock.view_picking_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//page[@name='operations']" position="before">
+        <page string="Detailed Operations" name="detailed_operations">
+          <field name="move_line_ids" mode="list" context="{'default_picking_id': id}">
+            <list editable="bottom" string="Detailed operations (editable lines)">
+              <control/>
+              <!-- Show Move column; user must select an existing move (no_create removes Create...). -->
+              <field name="move_id"
+                     string="Move"
+                     domain="[('picking_id', '=', parent.id)]"
+                     options="{'no_create': True}"/>
+              <!-- After selecting move_id, onchange on model will auto-fill these fields -->
+              <field name="product_id"/>
+              <field name="location_id" groups="stock.group_stock_multi_locations"/>
+              <field name="location_dest_id" groups="stock.group_stock_multi_locations"/>
+              <field name="quantity" string="Quantity"/>
+              <field name="product_uom_id" groups="uom.group_uom"/>
+              <field name="lot_id" groups="stock.group_production_lot"/>
+            </list>
+          </field>
+        </page>
+      </xpath>
+    </field>
+  </record>
+</odoo>
