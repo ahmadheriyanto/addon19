@@ -50,10 +50,12 @@
                     </a>
                     <field t-if="selection_mode" class="fw-bold fs-5 d-inline-block me-2" name="name"/>
                     <!-- show total pickings next to name -->
+                    <!-- lagi: tutup dulu sementara 
                     <span class="badge bg-light text-dark small"
                           t-att-title="'Total pickings: %s' % (record.picking_count.raw_value or 0)">
                       <t t-esc="record.picking_count.raw_value or 0"/>
                     </span>
+                    -->
                   </div>
                   <!-- optional extra controls placeholder -->
                   <div/>

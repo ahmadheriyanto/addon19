@@ -24,11 +24,14 @@ class StockPicking(models.Model):
 
         show_oos = False
         for picking in pickings:
-            company = picking.company_id or self.env.company
-            cfg_pt = company.fulfillment_default_operation_type_pick_id
-            if cfg_pt and picking.picking_type_id and picking.picking_type_id.id == cfg_pt.id:
-                show_oos = True
-                break
+            show_oos = picking.picking_type_id.show_oos_button_in_backorder_confirmation
+            if show_oos:
+                break            
+            # company = picking.company_id or self.env.company
+            # cfg_pt = company.fulfillment_default_operation_type_pick_id
+            # if cfg_pt and picking.picking_type_id and picking.picking_type_id.id == cfg_pt.id:
+            #     show_oos = True
+            #     break
 
         if show_oos:
             view = self.env.ref('fulfillment.view_backorder_confirmation_oos', raise_if_not_found=False)

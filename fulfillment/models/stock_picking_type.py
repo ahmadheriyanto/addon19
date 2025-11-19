@@ -11,6 +11,8 @@ _logger = logging.getLogger(__name__)
 class StockPickingType(models.Model):
     _inherit = "stock.picking.type"
 
+    show_oos_button_in_backorder_confirmation = fields.Boolean(string="Show OOS button in backorder confirmation")
+
     count_draft_reguler = fields.Integer(string="Draft / Reguler", compute="_compute_priority_counts")
     count_draft_medium = fields.Integer(string="Draft / Medium", compute="_compute_priority_counts")
     count_draft_instan = fields.Integer(string="Draft / Instan", compute="_compute_priority_counts")

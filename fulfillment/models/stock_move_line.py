@@ -45,24 +45,24 @@ class StockMoveLine(models.Model):
                         raise ValidationError("This picking has multiple moves. Please select which Move the new line belongs to.")
         return super(StockMoveLine, self).create(vals_list)
 
-    def write(self, vals):
-        """
-        Prevent editing move.lines that belong to pickings in 'done' or 'cancel' states.
+    # def write(self, vals):
+    #     """
+    #     Prevent editing move.lines that belong to pickings in 'done' or 'cancel' states.
 
-        If vals contains 'picking_id' (moving lines between pickings), also validate the target picking.
-        """
-        # Determine all pickings affected by this operation
-        affected_pickings = self.mapped("picking_id")
-        # If the write contains a picking_id change, include that target picking in checks
-        if vals.get("picking_id"):
-            target = self.env["stock.picking"].browse(vals.get("picking_id"))
-            if target.exists():
-                affected_pickings |= target
-        # Validate none of the affected pickings are done/cancel
-        for picking in affected_pickings:
-            if picking and picking.state in ("done", "cancel"):
-                raise ValidationError("Cannot modify move lines: picking %s is %s." % (picking.name or picking.id, picking.state))
-        return super(StockMoveLine, self).write(vals)
+    #     If vals contains 'picking_id' (moving lines between pickings), also validate the target picking.
+    #     """
+    #     # Determine all pickings affected by this operation
+    #     affected_pickings = self.mapped("picking_id")
+    #     # If the write contains a picking_id change, include that target picking in checks
+    #     if vals.get("picking_id"):
+    #         target = self.env["stock.picking"].browse(vals.get("picking_id"))
+    #         if target.exists():
+    #             affected_pickings |= target
+    #     # Validate none of the affected pickings are done/cancel
+    #     for picking in affected_pickings:
+    #         if picking and picking.state in ("done", "cancel"):
+    #             raise ValidationError("Cannot modify move lines: picking %s is %s." % (picking.name or picking.id, picking.state))
+    #     return super(StockMoveLine, self).write(vals)
 
     def unlink(self):
         """
