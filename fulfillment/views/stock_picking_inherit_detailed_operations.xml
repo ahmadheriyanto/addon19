@@ -6,15 +6,17 @@
     <field name="arch" type="xml">
       <xpath expr="//page[@name='operations']" position="before">
         <page string="Detailed Operations" name="detailed_operations">
-          <field name="move_line_ids" mode="list" context="{'default_picking_id': id}">
+          <!-- Make the list readonly when picking is done or cancelled -->
+          <field name="move_line_ids"
+                 mode="list"
+                 readonly="state in ('done', 'cancel')"
+                 context="{'default_picking_id': id}">
             <list editable="bottom" string="Detailed operations (editable lines)">
               <control/>
-              <!-- Show Move column; user must select an existing move (no_create removes Create...). -->
               <field name="move_id"
                      string="Move"
                      domain="[('picking_id', '=', parent.id)]"
                      options="{'no_create': True}"/>
-              <!-- After selecting move_id, onchange on model will auto-fill these fields -->
               <field name="product_id"/>
               <field name="location_id" groups="stock.group_stock_multi_locations"/>
               <field name="location_dest_id" groups="stock.group_stock_multi_locations"/>

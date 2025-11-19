@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
-from odoo import api, models
+# Fulfillment - customizations for stock.move.line to support inline Detailed Operations UX
+# - Auto-default move_id when creating a move.line from a picking that has exactly one move
+# - Prevent create/write/unlink when related picking is done or cancelled
+# - Require move_id when creating a move.line for a picking that has multiple moves
+# - Onchange to copy product/location/UoM from selected move_id (client-side), guarded by picking state
+from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
 
@@ -8,8 +13,12 @@ class StockMoveLine(models.Model):
 
     @api.model
     def default_get(self, fields):
-        """Auto-set move_id when creating a move.line from a picking that has exactly one move."""
-        res = super().default_get(fields)
+        """
+        When creating a move.line from the picking view (context has default_picking_id or active_id),
+        auto-set move_id if the picking has exactly one move. This allows inline creation without a popup
+        when there is only one possible target move.
+        """
+        res = super(StockMoveLine, self).default_get(fields)
         picking_id = self.env.context.get("default_picking_id") or self.env.context.get("active_id")
         if picking_id and "move_id" in fields and "move_id" not in res:
             picking = self.env["stock.picking"].browse(picking_id)
@@ -19,42 +28,93 @@ class StockMoveLine(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        """Ensure move_id is provided when picking has multiple moves."""
+        """
+        - Block creating move.lines for pickings that are 'done' or 'cancel'.
+        - If the picking has multiple moves, require move_id in vals (to force user selection).
+        """
+        # Pre-check for each set of vals to provide early, informative errors
         for vals in vals_list:
             picking_id = vals.get("picking_id") or self.env.context.get("default_picking_id") or self.env.context.get("active_id")
             if picking_id:
                 picking = self.env["stock.picking"].browse(picking_id)
-                if picking.exists() and len(picking.move_ids) > 1 and not vals.get("move_id"):
-                    raise ValidationError(
-                        "This picking has multiple moves. Please select which Move the new line belongs to."
-                    )
-        return super().create(vals_list)
+                if picking.exists():
+                    if picking.state in ("done", "cancel"):
+                        raise ValidationError("Cannot create move lines: the picking is %s." % picking.state)
+                    # If picking has multiple moves, ensure the new line explicitly references one
+                    if len(picking.move_ids) > 1 and not vals.get("move_id"):
+                        raise ValidationError("This picking has multiple moves. Please select which Move the new line belongs to.")
+        return super(StockMoveLine, self).create(vals_list)
+
+    def write(self, vals):
+        """
+        Prevent editing move.lines that belong to pickings in 'done' or 'cancel' states.
+
+        If vals contains 'picking_id' (moving lines between pickings), also validate the target picking.
+        """
+        # Determine all pickings affected by this operation
+        affected_pickings = self.mapped("picking_id")
+        # If the write contains a picking_id change, include that target picking in checks
+        if vals.get("picking_id"):
+            target = self.env["stock.picking"].browse(vals.get("picking_id"))
+            if target.exists():
+                affected_pickings |= target
+        # Validate none of the affected pickings are done/cancel
+        for picking in affected_pickings:
+            if picking and picking.state in ("done", "cancel"):
+                raise ValidationError("Cannot modify move lines: picking %s is %s." % (picking.name or picking.id, picking.state))
+        return super(StockMoveLine, self).write(vals)
+
+    def unlink(self):
+        """
+        Prevent deletion of move.lines that belong to pickings in 'done' or 'cancel'.
+        """
+        pickings = self.mapped("picking_id")
+        for picking in pickings:
+            if picking and picking.state in ("done", "cancel"):
+                raise ValidationError("Cannot delete move lines: picking %s is %s." % (picking.name or picking.id, picking.state))
+        return super(StockMoveLine, self).unlink()
 
     @api.onchange("move_id")
     def _onchange_move_id_fill_fields(self):
         """
-        When the user selects a move in the inline list, prefill the product, from and to (and UoM)
-        from the selected stock.move. This runs on the client side as an onchange.
+        Client-side onchange: when the user selects a move in the inline list, prefill:
+          - product_id
+          - location_id (From)
+          - location_dest_id (To)
+          - product_uom_id (if available on move)
+
+        This onchange only performs filling when the related picking is editable (not 'done'/'cancel').
+        If the picking is done/cancel, it returns a warning and does not modify the record.
         """
         for line in self:
+            # Determine related picking (line.picking_id should normally be set in the one2many context)
+            picking = line.picking_id
+            # Fallback to context if picking not yet set on the record
+            if not picking and self.env.context.get("default_picking_id"):
+                picking = self.env["stock.picking"].browse(self.env.context.get("default_picking_id"))
+
+            if picking and picking.state in ("done", "cancel"):
+                # Provide a client warning and do not alter fields
+                return {
+                    "warning": {
+                        "title": "Picking not editable",
+                        "message": "This picking is %s. You cannot set fields from the Move." % picking.state,
+                    }
+                }
+
             if line.move_id:
-                # Prefill product and locations from the selected move
+                # Copy values from the selected move into the move line
                 line.product_id = line.move_id.product_id.id or False
                 line.location_id = line.move_id.location_id.id or False
                 line.location_dest_id = line.move_id.location_dest_id.id or False
-                # Prefill UoM from the move if available
-                if hasattr(line.move_id, "product_uom"):
-                    # stock.move uses product_uom (not product_uom_id)
-                    try:
-                        line.product_uom_id = line.move_id.product_uom.id or False
-                    except Exception:
-                        # fallback: set nothing if attribute missing
-                        line.product_uom_id = False
+                # stock.move typically uses product_uom (not product_uom_id)
+                product_uom = getattr(line.move_id, "product_uom", False)
+                line.product_uom_id = product_uom.id if product_uom else False
             else:
-                # if move cleared, do not force values (leave as-is or clear)
-                # We choose not to clear product/location automatically to avoid surprise,
-                # but you can clear them if you want:
+                # Do not clear existing values to avoid surprising the user.
+                # If you prefer clearing on move change, uncomment the following:
                 # line.product_id = False
                 # line.location_id = False
                 # line.location_dest_id = False
+                # line.product_uom_id = False
                 pass
