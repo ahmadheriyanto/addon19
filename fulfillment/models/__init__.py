@@ -14,3 +14,4 @@ from . import stock_picking_backorder
 from . import stock_move_route_split
 from . import stock_picking_route_copy
 from . import stock_move_line
+from . import res_users
