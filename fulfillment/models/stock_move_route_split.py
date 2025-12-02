@@ -82,6 +82,7 @@ class StockMoveRouteSplit(models.Model):
             'principal_customer_name',
             'principal_customer_address',
             'courier_priority',
+            'partner_type',
         ]
 
         for origin, mv_group in groups.items():

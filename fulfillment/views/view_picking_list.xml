@@ -9,6 +9,7 @@
            then use transporter_partner_ids in the domain for principal_courier_id -->
       <xpath expr="//field[@name='origin']" position="after">
         <!-- ensure this field is present in the record that the client holds -->
+        <field name="partner_type"/>
         <field name="transporter_partner_ids" invisible="1"/>
         <field name="principal_courier_id"
                domain="[('id','in', transporter_partner_ids)]"

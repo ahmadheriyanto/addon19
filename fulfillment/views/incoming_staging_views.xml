@@ -6,7 +6,7 @@
         <field name="model">incoming_staging</field>
         <field name="arch" type="xml">
             <list string="Incoming Staging" create="true" edit="true" delete="true" default_order="courier_sort_score desc">
-                <field name="transaction_no"/>
+                <field name="resi_no"/>
                 <field name="datetime_string"/>
                 <field name="partner_id"/>  
                 <field name="partner_type"/>
@@ -40,7 +40,7 @@
                 <sheet>
                     <group>
                         <group>
-                            <field name="transaction_no" readonly="1"/>
+                            <field name="resi_no" readonly="1"/>
                             <field name="type"/>
                             <field name="status"/>
                             <field name="principal_courier"/>

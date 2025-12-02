@@ -99,7 +99,7 @@ class IncomingStagingStockReceipt(models.Model):
                     continue
 
                 # Idempotency: if a non-cancelled picking with this origin already exists, return it
-                existing = env['stock.picking'].search([('origin', '=', rec.transaction_no), ('state', '!=', 'cancel')], limit=1)
+                existing = env['stock.picking'].search([('origin', '=', rec.resi_no), ('state', '!=', 'cancel')], limit=1)
                 if existing:
                     msg = f"Picking already exists: {existing.name} (id={existing.id}) state={existing.state}"
                     _logger.info(msg)
@@ -150,13 +150,20 @@ class IncomingStagingStockReceipt(models.Model):
                         if tmpl_vals:
                             tmpl.sudo().write(tmpl_vals)
 
+                    # Build a per-line description to keep moves distinct
+                    line_desc = f"{product.display_name}"
+                    if incoming_tracking == 'lot' and incoming_tracking_no:
+                        line_desc += f" [LOT: {incoming_tracking_no}]"
+                    elif incoming_tracking == 'serial' and incoming_tracking_no:
+                        line_desc += f" [SERIALS: {incoming_tracking_no}]"
                     move_vals = {
                         'product_id': product.id,
                         'product_uom_qty': qty,
                         'product_uom': uom.id,
                         'location_id': picking_type.default_location_src_id.id,
                         'location_dest_id': picking_type.default_location_dest_id.id,
-                        'origin': rec.transaction_no,
+                        'origin': rec.resi_no,
+                        'description_picking': line_desc,
                     }
                     move_vals_list.append((0, 0, move_vals))
                     move_metadata.append({
@@ -172,13 +179,15 @@ class IncomingStagingStockReceipt(models.Model):
                     'picking_type_id': picking_type.id,
                     'location_id': picking_type.default_location_src_id.id,
                     'location_dest_id': picking_type.default_location_dest_id.id,
-                    'origin': rec.transaction_no,
+                    'origin': rec.resi_no,
                     'scheduled_date': odoo_fields.Datetime.now(),
                     'move_ids': move_vals_list,
                 }
 
                 # Prepare context for create (so default_get can pick defaults if used)
                 ctx = dict(env.context or {})
+                # Prevent stock.move merge so each incoming line stays separate
+                ctx['no_merge'] = True
 
                 # Carry-forward courier fields from incoming_staging into stock.picking
                 # rec is sudo() record, so principal_courier_id is accessible
@@ -193,6 +202,9 @@ class IncomingStagingStockReceipt(models.Model):
                 if getattr(rec, 'principal_customer_address', False):
                     picking_vals['principal_customer_address'] = rec.principal_customer_address
                     ctx.setdefault('default_principal_customer_address', rec.principal_customer_address)
+                if getattr(rec, 'partner_type', False):
+                    picking_vals['partner_type'] = rec.partner_type
+                    ctx.setdefault('default_partner_type', rec.partner_type)
                 # --- ADDED CODE END ---
 
                 # Create picking using the prepared context
@@ -375,7 +387,7 @@ class IncomingStagingStockReceipt(models.Model):
                     continue
 
                 # Idempotency: return existing non-cancelled picking
-                existing = env['stock.picking'].search([('origin', '=', rec.transaction_no), ('state', '!=', 'cancel')], limit=1)
+                existing = env['stock.picking'].search([('origin', '=', rec.resi_no), ('state', '!=', 'cancel')], limit=1)
                 if existing:
                     msg = f"Picking already exists: {existing.name} (id={existing.id}) state={existing.state}"
                     _logger.info(msg)
@@ -423,13 +435,19 @@ class IncomingStagingStockReceipt(models.Model):
                         if tmpl_vals:
                             tmpl.sudo().write(tmpl_vals)
 
+                    line_desc = f"{product.display_name}"
+                    if incoming_tracking == 'lot' and incoming_tracking_no:
+                        line_desc += f" [LOT: {incoming_tracking_no}]"
+                    elif incoming_tracking == 'serial' and incoming_tracking_no:
+                        line_desc += f" [SERIALS: {incoming_tracking_no}]"
                     move_vals = {
                         'product_id': product.id,
                         'product_uom_qty': qty,
                         'product_uom': uom.id,
                         'location_id': picking_type.default_location_src_id.id,
                         'location_dest_id': picking_type.default_location_dest_id.id,
-                        'origin': rec.transaction_no,
+                        'origin': rec.resi_no,
+                        'description_picking': line_desc,
                     }
                     move_vals_list.append((0, 0, move_vals))
                     move_metadata.append({
@@ -444,7 +462,7 @@ class IncomingStagingStockReceipt(models.Model):
                     'picking_type_id': picking_type.id,
                     'location_id': picking_type.default_location_src_id.id,
                     'location_dest_id': picking_type.default_location_dest_id.id,
-                    'origin': rec.transaction_no,
+                    'origin': rec.resi_no,
                     'scheduled_date': odoo_fields.Datetime.now(),
                     'move_ids': move_vals_list,
                 }
@@ -638,7 +656,7 @@ class IncomingStagingStockReceipt(models.Model):
                     continue
 
                 # Idempotency: return existing non-cancelled picking
-                existing = env['stock.picking'].search([('origin', '=', rec.transaction_no), ('state', '!=', 'cancel')], limit=1)
+                existing = env['stock.picking'].search([('origin', '=', rec.resi_no), ('state', '!=', 'cancel')], limit=1)
                 if existing:
                     msg = f"Picking already exists: {existing.name} (id={existing.id}) state={existing.state}"
                     _logger.info(msg)
@@ -693,13 +711,19 @@ class IncomingStagingStockReceipt(models.Model):
                         if tmpl_vals:
                             tmpl.sudo().write(tmpl_vals)
 
+                    line_desc = f"{product.display_name}"
+                    if incoming_tracking == 'lot' and incoming_tracking_no:
+                        line_desc += f" [LOT: {incoming_tracking_no}]"
+                    elif incoming_tracking == 'serial' and incoming_tracking_no:
+                        line_desc += f" [SERIALS: {incoming_tracking_no}]"
                     move_vals = {
                         'product_id': product.id,
                         'product_uom_qty': qty,
                         'product_uom': uom.id,
                         'location_id': picking_type.default_location_src_id.id,
                         'location_dest_id': picking_type.default_location_dest_id.id,
-                        'origin': rec.transaction_no,
+                        'origin': rec.resi_no,
+                        'description_picking': line_desc,
                     }
                     move_vals_list.append((0, 0, move_vals))
                     move_metadata.append({
@@ -714,7 +738,7 @@ class IncomingStagingStockReceipt(models.Model):
                     'picking_type_id': picking_type.id,
                     'location_id': picking_type.default_location_src_id.id,
                     'location_dest_id': picking_type.default_location_dest_id.id,
-                    'origin': rec.transaction_no,
+                    'origin': rec.resi_no,
                     'scheduled_date': odoo_fields.Datetime.now(),
                     'move_ids': move_vals_list,
                 }

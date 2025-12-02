@@ -46,6 +46,7 @@ class StockPickingRouteCopy(models.Model):
             'principal_courier_id',
             'principal_customer_name',
             'principal_customer_address',
+            'partner_type',
         ]
 
         # Process each created record. We try to match the created record against a source

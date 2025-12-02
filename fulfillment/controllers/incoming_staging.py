@@ -32,7 +32,7 @@ class IncomingStagingAPI(http.Controller):
 
         Expected JSON (application/json):
         {
-          "transaction_no": "TRX-001",
+          "resi_no": "TRX-001",
           "type": "inbound" | "forder",
           "datetime_string": "YYYY-MM-DDTHH:MM:SS",          
           "products": [ ... ],
@@ -59,7 +59,7 @@ class IncomingStagingAPI(http.Controller):
             )
 
         # Required top-level fields (type may be 'inbound' or 'forder')
-        required = ['transaction_no', 'type', 'datetime_string', 'products']
+        required = ['resi_no', 'type', 'datetime_string', 'products']
         for f in required:
             if f not in data:
                 return Response(
@@ -82,17 +82,6 @@ class IncomingStagingAPI(http.Controller):
                 json.dumps({'error': "Invalid 'datetime_string'. Expected ISO format like 2025-10-26T01:13:55"}),
                 status=400, content_type='application/json;charset=utf-8', headers=headers
             )
-
-        # # If type == 'forder' then require principal_* fields
-        # if data['type'] == 'forder':
-        #     principal_fields = ['principal_courier', 'principal_customer_name', 'principal_customer_address']
-        #     for pf in principal_fields:
-        #         v = data.get(pf)
-        #         if not v or (isinstance(v, str) and not v.strip()):
-        #             return Response(
-        #                 json.dumps({'error': f"Missing or empty field required for 'forder': {pf}"}),
-        #                 status=400, content_type='application/json;charset=utf-8', headers=headers
-        #             )
 
         # If type == 'forder' then require principal_* fields and validate courier exists in Transporter category
         if data['type'] == 'forder':
@@ -178,26 +167,6 @@ class IncomingStagingAPI(http.Controller):
                             status=400, content_type='application/json;charset=utf-8', headers=headers
                         )
 
-        # Resolve partner (id or email)
-        # partner = False
-        # partner_id = None
-        # partner_val = data.get('partner') or {}
-        # partner_model = request.env['res.partner'].sudo()
-        # if isinstance(partner_val, dict) and partner_val.get('id'):
-        #     partner = partner_model.search([('id', '=', int(partner_val.get('id')) )], limit=1)
-        #     if not partner:
-        #         return Response(json.dumps({'error': 'partner id not found'}),
-        #                         status=400, content_type='application/json;charset=utf-8', headers=headers)
-        #     partner_id = partner.id
-        # elif isinstance(partner_val, dict) and partner_val.get('email'):
-        #     partner = partner_model.search([('email', '=', partner_val.get('email'))], limit=1)
-        #     if not partner:
-        #         return Response(json.dumps({'error': 'partner email not found'}),
-        #                         status=400, content_type='application/json;charset=utf-8', headers=headers)
-        #     partner_id = partner.id
-        # else:
-        #     return Response(json.dumps({'error': 'partner must be an object with id or email'}),
-        #                     status=400, content_type='application/json;charset=utf-8', headers=headers)
         partner = False
         partner_id = user.sudo().partner_id.parent_id.id
         partner_model = request.env['res.partner'].sudo()        
@@ -247,7 +216,7 @@ class IncomingStagingAPI(http.Controller):
 
         # Build vals for create; include principal_* only when present (and they are required for 'forder' by earlier check)
         vals = {
-            'transaction_no': data['transaction_no'],
+            'resi_no': data['resi_no'],
             'type': data['type'],
             'datetime_string': data['datetime_string'],
             'partner_id': partner_id,
@@ -261,12 +230,13 @@ class IncomingStagingAPI(http.Controller):
             vals['principal_courier'] = (data.get('principal_courier') or '').strip()
             vals['principal_customer_name'] = (data.get('principal_customer_name') or '').strip()
             vals['principal_customer_address'] = (data.get('principal_customer_address') or '').strip()
+            vals['partner_type'] = (data.get('partner_type') or '').strip()
 
         staging_model = request.env['incoming_staging'].sudo()  #with_user(request.env.user.id)
         try:
             with request.env.cr.savepoint():
                 record = staging_model.create(vals)
-            res = {'id': record.id, 'transaction_no': record.transaction_no, 'message': 'created'}
+            res = {'id': record.id, 'resi_no': record.resi_no, 'message': 'created'}
 
             # determine company's configured priority label (fallback to 'Instan' if not set)
             rec = record.sudo()
@@ -359,9 +329,9 @@ class IncomingStagingAPI(http.Controller):
                                 "application/json": {
                                     "schema": {
                                         "type": "object",
-                                        "required": ["transaction_no", "type", "datetime_string", "partner", "products"],
+                                        "required": ["resi_no", "type", "datetime_string", "partner", "products"],
                                         "properties": {
-                                            "transaction_no": {"type": "string"},
+                                            "resi_no": {"type": "string"},
                                             "type": {"enum": ["inbound", "forder"]},
                                             "datetime_string": {"type": "string", "format": "date-time"},
                                             "partner": {

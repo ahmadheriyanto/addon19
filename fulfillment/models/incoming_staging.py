@@ -29,9 +29,9 @@ else:
 class IncomingStaging(models.Model):
     _name = 'incoming_staging'
     _description = 'incoming_staging'
-    _rec_name = 'transaction_no'
+    _rec_name = 'resi_no'
 
-    transaction_no = fields.Char(string="Transaction No.", required=True)
+    resi_no = fields.Char(string="Resi No.", required=True)
     type = fields.Selection(string="Type",
                             selection=[
                                 ('', ' '),
@@ -169,21 +169,20 @@ class IncomingStaging(models.Model):
             if partner:
                 rec.principal_courier_id = partner.id
 
-    @api.constrains('transaction_no')
+    @api.constrains('resi_no')
     def _check_name_unique(self):
         for record in self:
             existing = self.env['incoming_staging'].search([
-                ('transaction_no', '=', record.transaction_no),
+                ('resi_no', '=', record.resi_no),
                 ('id', '!=', record.id)
             ], limit=1)
             if existing:
-                raise ValidationError('transaction_no must be unique!')
-
+                raise ValidationError('resi_no must be unique!')
     def _build_qr_payload(self):
         self.ensure_one()
         payload = {
             'qr_type': 'incomingstaging',
-            'transaction_no': self.transaction_no,
+            'resi_no': self.resi_no,
             'type': self.type,
             'datetime_string': self.datetime_string,
             'partner_id': self.partner_id.id or None,
@@ -238,10 +237,10 @@ class IncomingStaging(models.Model):
                 png_bytes = rec._generate_qr_png_bytes(payload_text)
             except ImportError as ie:
                 # Library missing — log and re-raise so API/UI callers can react
-                _logger.error("QR generation unavailable for incoming_staging %s: %s", rec.id or rec.transaction_no, ie)
+                _logger.error("QR generation unavailable for incoming_staging %s: %s", rec.id or rec.resi_no, ie)
                 raise
             except Exception:
-                _logger.exception("Failed to generate QR for incoming_staging %s", rec.id or rec.transaction_no)
+                _logger.exception("Failed to generate QR for incoming_staging %s", rec.id or rec.resi_no)
                 raise
             # Ensure we write a text base64 value (not bytes) and use sudo to avoid rights issues.
             b64 = base64.b64encode(png_bytes).decode('ascii')
@@ -274,7 +273,7 @@ class IncomingStaging(models.Model):
         res = super(IncomingStaging, self).write(vals)
 
         regenerate = False
-        header_fields = {'transaction_no', 'type', 'datetime_string', 'partner_id'}
+        header_fields = {'resi_no', 'type', 'datetime_string', 'partner_id'}
         if header_fields.intersection(vals.keys()):
             regenerate = True
 
