@@ -332,6 +332,7 @@ class IncomingStagingProduct(models.Model):
         ondelete='cascade',
         index=True
     )
+    staging_type = fields.Selection(related='incoming_staging_id.type', readonly=True)  # for visibility control
     product_no = fields.Char(string="Product No.")
     product_nanme = fields.Char(string="Product Name")
     product_qty = fields.Float(string="Quantity")
@@ -343,3 +344,4 @@ class IncomingStagingProduct(models.Model):
         string="Tracking", required=True, default='none',
         help="Ensure the traceability of a storable product in your warehouse.")
     tracking_no = fields.Char(string="Tracking No.")
+    expiration_date = odoo_fields.Date(string="Expiration Date")

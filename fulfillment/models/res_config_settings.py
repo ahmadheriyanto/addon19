@@ -92,6 +92,11 @@ class ResConfigSettings(models.TransientModel):
         readonly=False,
     )
 
+    fulfillment_lot_sequence_id = fields.Many2one('ir.sequence', 
+        string='Lot Sequence',
+        related='company_id.fulfillment_lot_sequence_id',
+        readonly=False,)
+
     def action_refresh_courier_scoring(self):
         """
         Button handler invoked from Settings view. Calls partner method to recompute and write

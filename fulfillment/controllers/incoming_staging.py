@@ -25,6 +25,18 @@ def _cors_headers():
 
 
 class IncomingStagingAPI(http.Controller):
+    
+    #<<LAGI#999
+    def getnewlotno(self, company):
+        """Generate a new lot/serial number using a configured sequence or fallback logic."""
+        seq = company.sudo().fulfillment_lot_sequence_id
+        if seq:
+            # Use the sequence; ensure uniqueness in case of manual edits.
+            name = seq.next_by_id()
+            return name
+        return False
+    #>>
+    
     @http.route('/api/incoming_staging', type='http', auth='api_key', methods=['POST'], csrf=False)
     def create_incoming_staging(self, **kw):
         """
@@ -172,6 +184,8 @@ class IncomingStagingAPI(http.Controller):
         partner_model = request.env['res.partner'].sudo()        
         partner = partner_model.search([('id', '=', partner_id )], limit=1)    
 
+        company = user.sudo().partner_id.company_id or request.env.company
+
         # Check user is member of partner
         user = request.env.user
         if not user.partner_id or not user.partner_id.parent_id or user.partner_id.parent_id.id != partner_id:
@@ -184,7 +198,6 @@ class IncomingStagingAPI(http.Controller):
             return Response(json.dumps({'error': 'products must be a non-empty array'}),
                             status=400, content_type='application/json;charset=utf-8', headers=headers)
 
-        allowed_tracking = ('serial', 'lot', 'none')
         product_lines = []
         for idx, p in enumerate(products, start=1):
             # product_qty
@@ -197,22 +210,29 @@ class IncomingStagingAPI(http.Controller):
             if qty < 0:
                 return Response(json.dumps({'error': f'product at index {idx} has negative product_qty'}),
                                 status=400, content_type='application/json;charset=utf-8', headers=headers)
-
-            tracking_type = (p.get('tracking_type') or 'none')
-            if tracking_type not in allowed_tracking:
-                return Response(json.dumps({'error': f'product at index {idx} has invalid tracking_type (allowed: serial, lot, none)'}),
+            #<<LAGI#999
+            if data['type'] in ('inbound','return'):
+                # note: we use auto lot from sequence.
+                trackno = self.getnewlotno(company)
+                if not trackno:
+                    return Response(json.dumps({'error': 'Setting sequence untuk lot no. belum di konfigurasi di company.'}),
                                 status=400, content_type='application/json;charset=utf-8', headers=headers)
-
-            tracking_no = p.get('tracking_no') or ''
-            # note: we do not enforce serial count here; that will be validated later during processing/import.
-            product_lines.append({
-                'product_no': p.get('product_no') or '',
-                'product_nanme': p.get('product_nanme') or '',
-                'product_qty': qty,
-                'product_uom': p.get('product_uom') or '',
-                'tracking_type': tracking_type,
-                'tracking_no': tracking_no,
-            })
+                product_lines.append({
+                    'product_no': p.get('product_no') or '',
+                    'product_nanme': p.get('product_nanme') or '',
+                    'product_qty': qty,
+                    'product_uom': p.get('product_uom') or '',
+                    'tracking_type': 'lot',
+                    'tracking_no': trackno,
+                })
+            else:
+                product_lines.append({
+                    'product_no': p.get('product_no') or '',
+                    'product_nanme': p.get('product_nanme') or '',
+                    'product_qty': qty,
+                    'product_uom': p.get('product_uom') or '',
+                })
+            #>>
 
         # Build vals for create; include principal_* only when present (and they are required for 'forder' by earlier check)
         vals = {
@@ -252,9 +272,7 @@ class IncomingStagingAPI(http.Controller):
                 
                 # principal_courier_id is computed/stored on incoming_staging -> res.partner
                 courier_partner = rec.principal_courier_id
-                if courier_partner:
-                    
-
+                if courier_partner:                    
                     priority_label = (company.fulfillment_courier_label_priority or 'Instan').strip().lower()
 
                     # partner label (may be stored on partner or computed)

@@ -64,8 +64,9 @@
                                     <field name="product_nanme"/>
                                     <field name="product_qty" widget="integer"/>
                                     <field name="product_uom"/>
-                                    <field name="tracking_type"/>
-                                    <field name="tracking_no"/>
+                                    <field name="tracking_type" column_invisible="(parent.type == 'forder')"/>
+                                    <field name="tracking_no" column_invisible="(parent.type == 'forder')"/>
+                                    <field name="expiration_date" column_invisible="(parent.type == 'forder')"/>
                                 </list>
                                 <form>
                                     <sheet>
@@ -75,9 +76,10 @@
                                             <field name="product_qty" widget="integer"/>
                                             <field name="product_uom"/>
                                         </group>
-                                        <group>
-                                            <field name="tracking_type"/>
-                                            <field name="tracking_no"/>
+                                        <group invisible="(parent.type == 'forder')">
+                                            <field name="tracking_type" invisible="(parent.type == 'forder')"/>
+                                            <field name="tracking_no" invisible="(parent.type == 'forder')"/>
+                                            <field name="expiration_date" invisible="(parent.type == 'forder')"/>
                                         </group>
                                     </sheet>
                                 </form>
@@ -108,6 +110,7 @@
                 <field name="product_uom"/>
                 <field name="tracking_type"/>
                 <field name="tracking_no"/>
+                <field name="expiration_date"/>
             </list>
         </field>
     </record>

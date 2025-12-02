@@ -104,3 +104,5 @@ class ResCompany(models.Model):
         default='Instan',
         help='Label used when courier_scoring is Priority (above medium threshold).'
     )
+
+    fulfillment_lot_sequence_id = fields.Many2one('ir.sequence', 'Lot Sequence')
