@@ -236,7 +236,7 @@ class IncomingStagingAPI(http.Controller):
 
         # Build vals for create; include principal_* only when present (and they are required for 'forder' by earlier check)
         vals = {
-            'resi_no': data['resi_no'],
+            'transaction_no': data['resi_no'],
             'type': data['type'],
             'datetime_string': data['datetime_string'],
             'partner_id': partner_id,
@@ -256,7 +256,7 @@ class IncomingStagingAPI(http.Controller):
         try:
             with request.env.cr.savepoint():
                 record = staging_model.create(vals)
-            res = {'id': record.id, 'resi_no': record.resi_no, 'message': 'created'}
+            res = {'id': record.id, 'transaction_no': record.transaction_no, 'message': 'created'}
 
             # determine company's configured priority label (fallback to 'Instan' if not set)
             rec = record.sudo()

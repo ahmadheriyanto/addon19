@@ -99,7 +99,7 @@ class IncomingStagingStockReceipt(models.Model):
                     continue
 
                 # Idempotency: if a non-cancelled picking with this origin already exists, return it
-                existing = env['stock.picking'].search([('origin', '=', rec.resi_no), ('state', '!=', 'cancel')], limit=1)
+                existing = env['stock.picking'].search([('origin', '=', rec.transaction_no), ('state', '!=', 'cancel')], limit=1)
                 if existing:
                     msg = f"Picking already exists: {existing.name} (id={existing.id}) state={existing.state}"
                     _logger.info(msg)
@@ -166,7 +166,7 @@ class IncomingStagingStockReceipt(models.Model):
                         'product_uom': uom.id,
                         'location_id': picking_type.default_location_src_id.id,
                         'location_dest_id': picking_type.default_location_dest_id.id,
-                        'origin': rec.resi_no,
+                        'origin': rec.transaction_no,
                         'description_picking': line_desc,
                     }
                     move_vals_list.append((0, 0, move_vals))
@@ -187,7 +187,7 @@ class IncomingStagingStockReceipt(models.Model):
                     'picking_type_id': picking_type.id,
                     'location_id': picking_type.default_location_src_id.id,
                     'location_dest_id': picking_type.default_location_dest_id.id,
-                    'origin': rec.resi_no,
+                    'origin': rec.transaction_no,
                     'scheduled_date': odoo_fields.Datetime.now(),
                     'move_ids': move_vals_list,
                 }
@@ -397,7 +397,7 @@ class IncomingStagingStockReceipt(models.Model):
                     continue
 
                 # Idempotency: return existing non-cancelled picking
-                existing = env['stock.picking'].search([('origin', '=', rec.resi_no), ('state', '!=', 'cancel')], limit=1)
+                existing = env['stock.picking'].search([('origin', '=', rec.transaction_no), ('state', '!=', 'cancel')], limit=1)
                 if existing:
                     msg = f"Picking already exists: {existing.name} (id={existing.id}) state={existing.state}"
                     _logger.info(msg)
@@ -433,6 +433,7 @@ class IncomingStagingStockReceipt(models.Model):
 
                     incoming_tracking = (line.tracking_type or 'none')
                     incoming_tracking_no = (line.tracking_no or '').strip()
+                    incoming_expiration_date = line.expiration_date #LAGI#999
 
                     # Ensure template is storable and has correct tracking so UI doesn't hide lot fields
                     if incoming_tracking in ('lot', 'serial'):
@@ -442,6 +443,10 @@ class IncomingStagingStockReceipt(models.Model):
                             tmpl_vals['is_storable'] = True
                         if tmpl.tracking != incoming_tracking:
                             tmpl_vals['tracking'] = incoming_tracking
+                        #<<LAGI#999
+                        if not tmpl.use_expiration_date:
+                            tmpl_vals['use_expiration_date'] = True
+                        #>>
                         if tmpl_vals:
                             tmpl.sudo().write(tmpl_vals)
 
@@ -457,7 +462,7 @@ class IncomingStagingStockReceipt(models.Model):
                         'product_uom': uom.id,
                         'location_id': picking_type.default_location_src_id.id,
                         'location_dest_id': picking_type.default_location_dest_id.id,
-                        'origin': rec.resi_no,
+                        'origin': rec.transaction_no,
                         'description_picking': line_desc,
                     }
                     move_vals_list.append((0, 0, move_vals))
@@ -466,6 +471,7 @@ class IncomingStagingStockReceipt(models.Model):
                         'qty': qty,
                         'incoming_tracking': incoming_tracking,
                         'incoming_tracking_no': incoming_tracking_no,
+                        'incoming_expiration_date': incoming_expiration_date, #LAGI#999
                     })
 
                 picking_vals = {
@@ -474,7 +480,7 @@ class IncomingStagingStockReceipt(models.Model):
                     'picking_type_id': picking_type.id,
                     'location_id': picking_type.default_location_src_id.id,
                     'location_dest_id': picking_type.default_location_dest_id.id,
-                    'origin': rec.resi_no,
+                    'origin': rec.transaction_no,
                     'scheduled_date': odoo_fields.Datetime.now(),
                     'move_ids': move_vals_list,
                 }
@@ -507,6 +513,7 @@ class IncomingStagingStockReceipt(models.Model):
                         qty = meta['qty']
                         incoming_tracking = meta['incoming_tracking']
                         incoming_tracking_no = meta['incoming_tracking_no']
+                        incoming_expiration_date = meta['incoming_expiration_date'] #LAGI#999
 
                         # Prepare lot ids
                         lot_ids = []
@@ -515,7 +522,22 @@ class IncomingStagingStockReceipt(models.Model):
                                 raise ValidationError(f"tracking_type='lot' but no tracking_no provided for {product.display_name}")
                             lot = env['stock.lot'].search([('name', '=', incoming_tracking_no), ('product_id', '=', product.id)], limit=1)
                             if not lot:
-                                lot = env['stock.lot'].sudo().create({'name': incoming_tracking_no, 'product_id': product.id})
+                                lot = env['stock.lot'].sudo().create({
+                                    'name': incoming_tracking_no, 
+                                    'product_id': product.id,
+                                    #<<LAGI#999
+                                    'use_expiration_date': True,
+                                    'expiration_date': incoming_expiration_date
+                                    #>>
+                                })
+                            else:
+                                #<<LAGI#999
+                                if not lot.use_expiration_date and incoming_expiration_date:
+                                    lot.sudo().write({
+                                        'use_expiration_date': True,
+                                        'expiration_date': incoming_expiration_date
+                                    })
+                                #>>
                             lot_ids = [lot.id]
                         elif incoming_tracking == 'serial':
                             serials = [s.strip() for s in re.split(r'[,\n;|]+', incoming_tracking_no) if s.strip()]
@@ -668,7 +690,7 @@ class IncomingStagingStockReceipt(models.Model):
                     continue
 
                 # Idempotency: return existing non-cancelled picking
-                existing = env['stock.picking'].search([('origin', '=', rec.resi_no), ('state', '!=', 'cancel')], limit=1)
+                existing = env['stock.picking'].search([('origin', '=', rec.transaction_no), ('state', '!=', 'cancel')], limit=1)
                 if existing:
                     msg = f"Picking already exists: {existing.name} (id={existing.id}) state={existing.state}"
                     _logger.info(msg)
@@ -711,6 +733,7 @@ class IncomingStagingStockReceipt(models.Model):
 
                     incoming_tracking = (line.tracking_type or 'none')
                     incoming_tracking_no = (line.tracking_no or '').strip()
+                    incoming_expiration_date = line.expiration_date #LAGI#999
 
                     # Ensure template is storable and has correct tracking so UI doesn't hide lot fields
                     if incoming_tracking in ('lot', 'serial'):
@@ -720,6 +743,10 @@ class IncomingStagingStockReceipt(models.Model):
                             tmpl_vals['is_storable'] = True
                         if tmpl.tracking != incoming_tracking:
                             tmpl_vals['tracking'] = incoming_tracking
+                        #<<LAGI#999
+                        if not tmpl.use_expiration_date:
+                            tmpl_vals['use_expiration_date'] = True
+                        #>>
                         if tmpl_vals:
                             tmpl.sudo().write(tmpl_vals)
 
@@ -734,7 +761,7 @@ class IncomingStagingStockReceipt(models.Model):
                         'product_uom': uom.id,
                         'location_id': picking_type.default_location_src_id.id,
                         'location_dest_id': picking_type.default_location_dest_id.id,
-                        'origin': rec.resi_no,
+                        'origin': rec.transaction_no,
                         'description_picking': line_desc,
                     }
                     move_vals_list.append((0, 0, move_vals))
@@ -743,6 +770,7 @@ class IncomingStagingStockReceipt(models.Model):
                         'qty': qty,
                         'incoming_tracking': incoming_tracking,
                         'incoming_tracking_no': incoming_tracking_no,
+                        'incoming_expiration_date': incoming_expiration_date, #LAGI#999
                     })
 
                 picking_vals = {
@@ -751,7 +779,7 @@ class IncomingStagingStockReceipt(models.Model):
                     'picking_type_id': picking_type.id,
                     'location_id': picking_type.default_location_src_id.id,
                     'location_dest_id': picking_type.default_location_dest_id.id,
-                    'origin': rec.resi_no,
+                    'origin': rec.transaction_no,
                     'scheduled_date': odoo_fields.Datetime.now(),
                     'move_ids': move_vals_list,
                 }
@@ -783,6 +811,7 @@ class IncomingStagingStockReceipt(models.Model):
                         qty = meta['qty']
                         incoming_tracking = meta['incoming_tracking']
                         incoming_tracking_no = meta['incoming_tracking_no']
+                        incoming_expiration_date = meta['incoming_expiration_date'] #LAGI#999
 
                         # Prepare lot ids
                         lot_ids = []
@@ -791,7 +820,22 @@ class IncomingStagingStockReceipt(models.Model):
                                 raise ValidationError(f"tracking_type='lot' but no tracking_no provided for {product.display_name}")
                             lot = env['stock.lot'].search([('name', '=', incoming_tracking_no), ('product_id', '=', product.id)], limit=1)
                             if not lot:
-                                lot = env['stock.lot'].sudo().create({'name': incoming_tracking_no, 'product_id': product.id})
+                                lot = env['stock.lot'].sudo().create({
+                                    'name': incoming_tracking_no, 
+                                    'product_id': product.id,
+                                    #<<LAGI#999
+                                    'use_expiration_date': True,
+                                    'expiration_date': incoming_expiration_date
+                                    #>>
+                                })
+                            else:
+                                #<<LAGI#999
+                                if not lot.use_expiration_date and incoming_expiration_date:
+                                    lot.sudo().write({
+                                        'use_expiration_date': True,
+                                        'expiration_date': incoming_expiration_date
+                                    })
+                                #>>
                             lot_ids = [lot.id]
                         elif incoming_tracking == 'serial':
                             serials = [s.strip() for s in re.split(r'[,\n;|]+', incoming_tracking_no) if s.strip()]
