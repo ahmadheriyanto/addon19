@@ -46,20 +46,26 @@ class StockPickingType(models.Model):
     # overall record count per picking.type (stored); keeps your existing badge working
     picking_count = fields.Integer(
         string="Pickings",
-        compute="_compute_picking_count",
+        compute="_compute_picking_count_custom",
         store=True,
         readonly=True,
         help="Total number of stock.picking records for this picking type."
     )
 
     @api.depends()
-    def _compute_picking_count(self):
-        """Compute the total number of pickings per picking.type using read_group for performance."""
+    def _compute_picking_count_custom(self):
+        """Compute the total number of pickings per picking.type using _read_group for performance."""
         Picking = self.env['stock.picking']
         if not self:
             return
-        grouped = Picking.read_group([('picking_type_id', 'in', self.ids)], ['picking_type_id'], ['picking_type_id'])
-        counts = {g['picking_type_id'][0]: g['picking_type_id_count'] for g in grouped if g.get('picking_type_id')}
+        # groupby must contain the field, aggregates contain the aggregate(s)
+        grouped = Picking._read_group(
+            [('picking_type_id', 'in', self.ids)],
+            groupby=['picking_type_id'],
+            aggregates=['id:count'],
+        )
+        # grouped yields tuples: (picking_type_record, id_count)
+        counts = {ptype.id: id_count for ptype, id_count in grouped}
         for rec in self:
             rec.picking_count = counts.get(rec.id, 0)
 
@@ -151,19 +157,20 @@ class StockPickingType(models.Model):
                 curb = getattr(rec, bfield, 0) or 0
                 setattr(rec, bfield, curb + 1)
 
-        # Compute "late" counts efficiently via read_group: scheduled_date < now and not done/cancel
+        # Compute "late" counts efficiently via _read_group: scheduled_date < now and not done/cancel
         try:
             now_dt = fields.Datetime.now()
-            late_grouped = Picking.read_group(
+            late_grouped = Picking._read_group(
                 [('picking_type_id', 'in', self.ids),
                  ('scheduled_date', '<', now_dt),
                  ('state', 'not in', ['done', 'cancel'])],
-                ['picking_type_id'],
-                ['picking_type_id']
+                groupby=['picking_type_id'],
+                aggregates=['id:count'],
             )
-            late_counts = {g['picking_type_id'][0]: g['picking_type_id_count'] for g in late_grouped if g.get('picking_type_id')}
+            # late_grouped yields: (picking_type_record, id_count)
+            late_counts = {ptype.id: id_count for ptype, id_count in late_grouped}
         except Exception:
-            _logger.exception("Failed to compute late picking counts via read_group")
+            _logger.exception("Failed to compute late picking counts via _read_group")
             late_counts = {}
 
         # Final pass: ensure aggregate counters are consistent for all recs
