@@ -18,6 +18,7 @@ Long description of module's purpose
     'license': 'LGPL-3',
     # any module necessary for this one to work correctly
     'depends': [
+        'web',
         'base',
         'product',
         'website',
@@ -25,7 +26,9 @@ Long description of module's purpose
         'uom',
     ],
     "assets": {
-        "web.assets_backend": [            
+        "web.assets_backend": [
+            #"fulfillment/static/src/xml/stock_traceability_report_extend.xml",
+            #"fulfillment/static/src/client_actions/stock_traceability_report_extend.js",
         ],
     },    
     # always loaded
@@ -47,7 +50,7 @@ Long description of module's purpose
         'views/stock_picking_type_menu_add.xml',
         'views/stock_backorder_confirmation_oos_view.xml',      
         'views/stock_picking_inherit_detailed_operations.xml',
-        'views/stock_picking_type_form.xml',  
+        'views/stock_picking_type_form.xml',
     ],
     # only loaded in demonstration mode
     'demo': [

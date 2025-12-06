@@ -1,0 +1,16 @@
+<templates xml:space="preserve">
+    <t t-name="fulfillment.stock_traceability_extend" t-priority="100">
+        <!-- Add header: last column -->
+        <t t-extend="stock.TraceabilityReport">
+            <t t-jquery=".o_stock_reports_table thead tr.o_report_header" t-operation="append">
+                <th class="o_report_line_header">Expired Date</th>
+            </t>
+        </t>
+        <!-- Add body cell: last column in each row -->
+        <t t-extend="stock.ReportMRPLines">
+            <t t-jquery="tr" t-operation="append">
+                <td t-esc="(line.lot and (line.lot.use_date or line.lot.life_date)) or ''"/>
+            </t>
+        </t>
+    </t>
+</templates>
