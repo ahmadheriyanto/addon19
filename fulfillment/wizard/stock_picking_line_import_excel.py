@@ -7,7 +7,8 @@ from datetime import datetime
 import base64
 import xlrd
 import math
-import time
+import io
+import re
 import logging
 _logger = logging.getLogger(__name__)
 
@@ -22,10 +23,10 @@ class ImportReceiptLine(models.TransientModel):
     )
     location_id = fields.Many2one(
         'stock.location', "Source Location",
-        default=lambda self: self.env['stock.picking.type'].browse(self._context.get('default_picking_type_id')).default_location_src_id, required=True)
+        default=lambda self: self.env['stock.picking.type'].browse(self.env.context.get('default_picking_type_id')).default_location_src_id, required=True)
     location_dest_id = fields.Many2one(
         'stock.location', "Destination Location",
-        default=lambda self: self.env['stock.picking.type'].browse(self._context.get('default_picking_type_id')).default_location_dest_id, required=True)
+        default=lambda self: self.env['stock.picking.type'].browse(self.env.context.get('default_picking_type_id')).default_location_dest_id, required=True)
     picking_type_id = fields.Many2one(
         'stock.picking.type', 'Operation Type', required=True)
     upload_file = fields.Binary(string="Lookup Excel File")
@@ -153,7 +154,7 @@ class ImportReceiptLine(models.TransientModel):
         if not (self.picking_type_id.code in ('incoming', 'internal', 'outgoing')):
             raise UserError(_('Operation Type is not inbound scope'))
 
-        mpath = get_module_path('import_excel_stockmove')
+        mpath = get_module_path('fulfillment')
         
         now = datetime.now()
         dt_string = now.strftime("%Y_%m_%d_%H_%M_%S_%f")
@@ -190,8 +191,13 @@ class ImportReceiptLine(models.TransientModel):
 
         stock_picking_id = []
         stock_picking = []
-        if import_data:
+        if import_data:    
+            # Prepare context for create (so default_get can pick defaults if used)
+            ctx = dict(self.sudo().env.context or {})
+            # Prevent stock.move merge so each incoming line stays separate
+            ctx['no_merge'] = True
             for row in import_data:
+                partner_type = row['PARTNER TYPE (B2B/B2C)'].lower()
                 # Check master product
                 product_no = row['PRODUCT CODE']
                 if isinstance(product_no, int) or isinstance(product_no, float):
@@ -231,6 +237,7 @@ class ImportReceiptLine(models.TransientModel):
                         'location_id': self.location_id.id,
                         'location_dest_id': self.location_dest_id.id,
                         'origin': ijno,
+                        'partner_type': partner_type,
                     })
                 else:
                     stock_picking = stock_picking[0]
@@ -252,7 +259,7 @@ class ImportReceiptLine(models.TransientModel):
                         raise UserError(
                             _('Location %s is not found in database' % row['DESTINATION LOC']))
 
-                # Check Stock.production.lot
+                # Check Stock.lot
                 #raise UserError(_('test: ijno = %s, Best before date = %s ' % (ijno,datetime(*xlrd.xldate_as_tuple(row['Best before date'], 0)))))
                 batchno = row['BATCH']
                 if isinstance(batchno, int) or isinstance(batchno, float):
@@ -262,38 +269,44 @@ class ImportReceiptLine(models.TransientModel):
                     else:
                         batchno = str(batchno)
 
-                check_lot = self.env['stock.production.lot'].search(
+                check_lot = self.env['stock.lot'].search(
                     [('name', '=', batchno), ('product_id', '=', check_product.id)])
                 if not check_lot:
-                    check_lot = self.env['stock.production.lot'].create({
+                    check_lot = self.env['stock.lot'].create({
                         'name': batchno,
                         'product_id': check_product.id,
                         'ref': ijno,
-                        'use_date': datetime(*xlrd.xldate_as_tuple(row['EXPIRED'], 0))
+                        'use_expiration_date': True,
+                        'expiration_date': datetime(*xlrd.xldate_as_tuple(row['EXPIRED'], 0))
                     })
                 else:
                     check_lot = check_lot[0]
 
-                qty_done = 0
-                if self.fill_qty_done:
-                    qty_done = row['QTY']
+                qty_done = row['QTY']
 
                 # mulai input data
-                stock_move = stock_picking.move_lines.create({
-                    'name': check_product.name,
+                stock_move = stock_picking.move_ids.with_context(ctx).create({
+                    'description_picking': f"{check_product.display_name} [LOT: {check_lot.name}]",
                     'sequence': 10,
                     'company_id': stock_picking.company_id.id,
                     'product_id': check_product.id,
                     'product_uom': check_uom.id,
                     # 'product_qty': row['QTY Kirim'],
                     'product_uom_qty': row['QTY'],
+                    'quantity': qty_done,
                     'location_id': stock_picking.location_id.id,
-                    'location_dest_id': loc_obj[0].id if self.picking_type_id.code in ('incoming','internal') else stock_picking.location_dest_id.id,
+                    'location_dest_id': (
+                        loc_obj[0].id if (self.picking_type_id.code in ('incoming', 'internal') and loc_obj)
+                        else stock_picking.location_dest_id.id
+                    ),
                     'picking_type_id': stock_picking.picking_type_id.id,
                     'picking_id': stock_picking.id,
-                    'suggest_lot_id': check_lot.id
-                })
-                
+                    #'lot_ids': [(6, 0, check_lot.ids)],
+                })   
+
+                if check_lot:
+                    stock_move.sudo().write({'lot_ids': [(6, 0, check_lot.ids)]})             
+
             #raise UserError(_('Sukses import_data, stock_picking_id = %s' % stock_picking_id))
             if (self.picking_type_id.code == 'incoming'):
                 #self.fix_unreserved_qty()  # supaya tidak terjadi reserve
@@ -301,38 +314,29 @@ class ImportReceiptLine(models.TransientModel):
                     pick = self.env["stock.picking"].search([('id', '=', picking_id)])
                     pick.action_confirm() #mark as todo
                     pick.action_assign()  #check avaibility
-                    """
-                    stock_move_lines = self.env["stock.move.line"].search([
-                        ('picking_id', '=', picking_id),
-                        ('lot_name', '=', False),
-                        ('product_uom_qty', '=', 0),
-                        ('qty_done', '=', 0)
-                    ])
-                    stock_move_lines.unlink()
-                    """
                     
-                    # *** Manage QR Data ***
-                    qr_data = self.env['qr.data.header'].search([('picking_id', '=', pick.id)])
-                    if not qr_data:
-                        qr_data = qr_data.create({
-                            'name': pick.name,
-                            'picking_type_id': pick.picking_type_id.id,
-                            'description': pick.origin,
-                            'picking_id':pick.id,
-                        })
-                    for stock_move_for_qrdata in pick.move_lines:
-                        qr_data_line = self.env['qr.data.line'].search([('picking_move_id', '=', stock_move_for_qrdata.id)])
-                        if not qr_data_line:
-                            qr_data.line_ids.create({
-                                'header_id': qr_data.id,
-                                'picking_move_id': stock_move_for_qrdata.id,
-                                'product_id': stock_move_for_qrdata.product_id.id,
-                                'lot_name': stock_move_for_qrdata.suggest_lot_id.name,
-                                'expired_date': stock_move_for_qrdata.suggest_lot_id.use_date,
-                                'product_qty': stock_move_for_qrdata.product_uom_qty,
-                                'product_uom': stock_move_for_qrdata.product_uom.id,
-                            })
-                    qr_data.action_generate_qr()
+                    # # *** Manage QR Data ***
+                    # qr_data = self.env['qr.data.header'].search([('picking_id', '=', pick.id)])
+                    # if not qr_data:
+                    #     qr_data = qr_data.create({
+                    #         'name': pick.name,
+                    #         'picking_type_id': pick.picking_type_id.id,
+                    #         'description': pick.origin,
+                    #         'picking_id':pick.id,
+                    #     })
+                    # for stock_move_for_qrdata in pick.move_ids:
+                    #     qr_data_line = self.env['qr.data.line'].search([('picking_move_id', '=', stock_move_for_qrdata.id)])
+                    #     if not qr_data_line:
+                    #         qr_data.line_ids.create({
+                    #             'header_id': qr_data.id,
+                    #             'picking_move_id': stock_move_for_qrdata.id,
+                    #             'product_id': stock_move_for_qrdata.product_id.id,
+                    #             'lot_name': stock_move_for_qrdata.suggest_lot_id.name,
+                    #             'expired_date': stock_move_for_qrdata.suggest_lot_id.use_date,
+                    #             'product_qty': stock_move_for_qrdata.product_uom_qty,
+                    #             'product_uom': stock_move_for_qrdata.product_uom.id,
+                    #         })
+                    # qr_data.action_generate_qr()
         
             #Show result in list based on stock_picking_id
             context = dict(self.env.context)
@@ -341,7 +345,7 @@ class ImportReceiptLine(models.TransientModel):
                 'domain': "[('id','in', ["+','.join(map(str, stock_picking_id))+"])]", # stock_picking.ids
                 'name': _('New Created Records (Inbound)'),
                 'view_type': 'form',
-                'view_mode': 'tree,form',
+                'view_mode': 'list,form',
                 'res_model': 'stock.picking',
                 'view_id': False,
                 'context': False,
@@ -474,17 +478,10 @@ class ImportReceiptLine(models.TransientModel):
                 stock_picking_find = stock_picking.search(
                     [('id', '=', stock_picking_per_customer["stock_picking_id"])])
                 stock_picking_find = stock_picking_find[0]
-                # if not stock_picking_find:
-                #    raise UserError(_('stock.move with id %s is not found' % stock_picking_per_customer["stock_picking_id"]))
-                # else:
-                #    raise UserError(_('stock_picking_find = %s' % stock_picking_find.partner_id.name))
-                # >>***
-
-                #raise UserError(_('LOCATION = %s, Check Location %s with id %s' % (row['LOCATION'],check_loc.name,check_loc.id)))
-
+                
                 # Check LOT
 
-                # Check Stock.production.lot
+                # Check Stock.lot
                 #raise UserError(_('test: ijno = %s, Best before date = %s ' % (ijno,datetime(*xlrd.xldate_as_tuple(row['Best before date'], 0)))))
                 batchno = row['Batch Number']
                 if isinstance(batchno, int) or isinstance(batchno, float):
@@ -494,17 +491,13 @@ class ImportReceiptLine(models.TransientModel):
                     else:
                         batchno = str(batchno)
 
-                check_lot = self.env['stock.production.lot'].search(
+                check_lot = self.env['stock.lot'].search(
                     [('name', '=', batchno), ('product_id', '=', check_product.id)])
                 if not check_lot:
                     raise UserError(
                         _('Batch# %s on Product %s does not exist in master data' % (batchno, product_no)))
                 else:
                     check_lot = check_lot[0]
-
-                #qty_done = 0
-                # if self.fill_qty_done:
-                #    qty_done = row['Pick quantity']
 
                 # mulai input data
                 if stock_picking_find:
@@ -546,3 +539,61 @@ class ImportReceiptLine(models.TransientModel):
                 'context': False,
                 'type': 'ir.actions.act_window'
             }
+
+    @api.model
+    def export_template_importdata(self, inspection_id=None):
+        """
+        Build an XLSX template and, if possible, prefill a data row from:
+         - provided inspection_id, or
+         - active_id in context, or
+         - first record in inspection_bpkb (ordered by `no` ascending).
+
+        Returns an ir.actions.act_url to download the generated file.
+        """
+        try:
+            from openpyxl import Workbook
+        except ImportError:
+            raise UserError(_("openpyxl must be installed on the server to export the template."))
+
+        def sanitize_sheet_title(title: str) -> str:
+            title = re.sub(r'[:\\\/\?\*\[\]]', '', (title or '').strip())
+            if len(title) > 31:
+                title = title[:31]
+            if not title:
+                title = "Sheet1"
+            return title
+
+        # Build workbook and headers (must match header_check mapping)
+        wb = Workbook()
+        ws = wb.active
+        if ws is None:
+            ws = wb.create_sheet()
+        ws.title = sanitize_sheet_title("Template")
+
+        headers = [
+            'PO NUMBER', 'PRODUCT CODE', 'BATCH', 'EXPIRED',
+            'QTY', 'UOM', 'PARTNER TYPE (B2B/B2C)'
+        ]
+        ws.append(headers)
+
+        # Save to bytes
+        buf = io.BytesIO()
+        wb.save(buf)
+        template_bytes = buf.getvalue()
+
+        # Create a temporary attachment and return URL to download it
+        attachment = self.env['ir.attachment'].create({
+            'name': 'inbound.xlsx',
+            'type': 'binary',
+            'datas': base64.b64encode(template_bytes).decode('utf-8'),
+            'mimetype': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'res_model': False,
+            'res_id': False,
+            'public': False,
+        })
+
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/web/content/{attachment.id}?download=true',
+            'target': 'self',
+        }

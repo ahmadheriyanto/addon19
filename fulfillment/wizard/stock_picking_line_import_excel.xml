@@ -20,11 +20,13 @@
                     <div><label for="location_dest_id" string="Destination"/></div>
                     <div><field name="location_dest_id"/></div>
 
-                    <div><label for="fill_qty_done" string="Fill qty done"/></div>
-                    <div><field name="fill_qty_done"/></div>                    
+                    <!-- <div><label for="fill_qty_done" string="Fill qty done"/></div>
+                    <div><field name="fill_qty_done"/></div>                     -->
                     
                     <div><label for="upload_file" string="Click 'Upload your file' button, after that click Upload Button : "/></div>
                     <div><field name="upload_file"/></div>
+                    <br/>
+                    <button string="Download Template" name="export_template_importdata" type="object" class="btn-primary"/>                    
                 </group>
                 <footer>
                     <button string="Upload" name="import_format_inbound_wh" default_focus="1" type="object" class="btn-primary"/>
@@ -33,5 +35,20 @@
             </form>
         </field>
     </record>
+
+    <record id="action_import_ij" model="ir.actions.act_window">
+        <field name="name">Import - IJ / Putaway</field>
+        <field name="res_model">stock_picking_import_receipt</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="fulfillment.import_format_inbound_wh_form"/>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem
+        id="menu_import_inbound"
+        name="Import - IJ / Putaway"
+        parent="menu_fulfillment_root"
+        action="action_import_ij"
+        sequence="15"/>
 
 </odoo>

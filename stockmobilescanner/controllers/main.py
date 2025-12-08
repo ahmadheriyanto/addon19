@@ -89,9 +89,9 @@ class MobileWarehouseController(http.Controller):
         }
         # handle lot/serial (create minimal lot if missing)
         if lot_name:
-            lot = env['stock.production.lot'].sudo().search([('name', '=', lot_name), ('product_id', '=', move.product_id.id)], limit=1)
+            lot = env['stock.lot'].sudo().search([('name', '=', lot_name), ('product_id', '=', move.product_id.id)], limit=1)
             if not lot:
-                lot = env['stock.production.lot'].sudo().create({'name': lot_name, 'product_id': move.product_id.id})
+                lot = env['stock.lot'].sudo().create({'name': lot_name, 'product_id': move.product_id.id})
             ml_vals['lot_id'] = lot.id
 
         ml = env['stock.move.line'].sudo().create(ml_vals)
