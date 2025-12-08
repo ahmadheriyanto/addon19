@@ -6,7 +6,6 @@
         <field name="model">ir.actions.act_window</field>
         <field name="inherit_id" ref="base.view_window_action_search"/>
         <field name="arch" type="xml">
-<!--            res_model 原生已有-->
             <field name="name" position="after">
                 <field name="binding_model_id"/>
             </field>

@@ -3,7 +3,7 @@
 
 from odoo import models, fields, api
 from odoo.exceptions import ValidationError
-from odoo.osv import expression
+from odoo.fields import Domain
 
 from io import BytesIO
 import base64
@@ -44,7 +44,7 @@ class ShProductProduct(models.Model):
             if not args:
                 args = []
             domain = [('sh_qr_code', '=', name)]
-            domain = expression.AND([args, domain])
+            domain = Domain(args) & Domain(domain)
             result = list(self._search(
                 domain, limit=limit, access_rights_uid=name_get_uid, order=order))
         return result
@@ -52,8 +52,7 @@ class ShProductProduct(models.Model):
     @api.model_create_multi
     def create(self, vals):
         res = super(ShProductProduct, self).create(vals)
-        is_create_qr_code = self.env['ir.config_parameter'].sudo().get_param(
-            'sh_product_qrcode_generator.is_sh_product_qrcode_generator_when_create')
+        is_create_qr_code = True
         if is_create_qr_code:
             qr_sequence = self.env['ir.sequence'].next_by_code(
                 'seq.sh_product_qrcode_generator')
