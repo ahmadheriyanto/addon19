@@ -2,3 +2,4 @@
 .vscode
 .vscode/lunch.json
 fulfillment/models/__pycache__/*.pyc
+fulfillment/tmp/*.xlsx
