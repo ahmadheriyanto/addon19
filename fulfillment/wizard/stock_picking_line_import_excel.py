@@ -252,7 +252,7 @@ class ImportReceiptLine(models.TransientModel):
                 loc_obj = []
                 if self.picking_type_id.code == 'internal':                    
                     loc_obj = self.env['stock.location'].search([
-                        ('complete_name', '=', _('Physical Locations/%s' %
+                        ('complete_name', '=', _('%s' %
                             row['DESTINATION LOC'])),
                     ])
                     if not loc_obj:
@@ -540,7 +540,7 @@ class ImportReceiptLine(models.TransientModel):
                 'type': 'ir.actions.act_window'
             }
 
-    @api.model
+    # @api.model
     def export_template_importdata(self, inspection_id=None):
         """
         Build an XLSX template and, if possible, prefill a data row from:
@@ -569,11 +569,16 @@ class ImportReceiptLine(models.TransientModel):
         if ws is None:
             ws = wb.create_sheet()
         ws.title = sanitize_sheet_title("Template")
-
+        
         headers = [
             'PO NUMBER', 'PRODUCT CODE', 'BATCH', 'EXPIRED',
             'QTY', 'UOM', 'PARTNER TYPE (B2B/B2C)'
         ]
+        if self.picking_type_id.code == 'internal':
+            headers = [
+                'PO NUMBER', 'PRODUCT CODE', 'BATCH', 'EXPIRED',
+                'QTY', 'UOM', 'DESTINATION LOC', 'PARTNER TYPE (B2B/B2C)'
+            ]    
         ws.append(headers)
 
         # Save to bytes

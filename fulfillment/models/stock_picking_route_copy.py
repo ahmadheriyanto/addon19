@@ -54,7 +54,15 @@ class StockPickingRouteCopy(models.Model):
         for rec, vals in zip(records, vals_list):
             # If create explicitly supplied the field, skip copying for that field
             # Use the vals provided to create() as the canonical "explicitly set" indicator.
-            origin = vals.get('origin') or (rec.origin or '') or vals.get('name') or rec.name
+            raw_origin = vals.get('origin') or (rec.origin or '') or vals.get('name') or rec.name
+            origin = ''
+            if raw_origin:
+                try:
+                    # Avoid passing non-string types to regex/search domains
+                    origin = str(raw_origin)
+                except Exception:
+                    origin = ''
+
             if not origin:
                 continue
 
