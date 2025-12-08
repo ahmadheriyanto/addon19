@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<odoo>
+
+    <record id="import_format_inbound_wh_form" model="ir.ui.view">
+        <field name="name">import_format_inbound_wh_form</field>
+        <field name="model">stock_picking_import_receipt</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <div><label for="partner_id" string="Partner"/></div>
+                    <div><field name="partner_id"/></div>
+
+                    <div><label for="picking_type_id" string="Operation Type"/></div>
+                    <div><field name="picking_type_id" domain="[('code', 'in', ['incoming','internal','outgoing'])]" options="{'no_create': True, 'no_create_edit':True}"/></div>
+
+                    <div><label for="location_id" string="Source Location"/></div>
+                    <div><field name="location_id"/></div>
+
+                    <div><label for="location_dest_id" string="Destination"/></div>
+                    <div><field name="location_dest_id"/></div>
+
+                    <div><label for="fill_qty_done" string="Fill qty done"/></div>
+                    <div><field name="fill_qty_done"/></div>                    
+                    
+                    <div><label for="upload_file" string="Click 'Upload your file' button, after that click Upload Button : "/></div>
+                    <div><field name="upload_file"/></div>
+                </group>
+                <footer>
+                    <button string="Upload" name="import_format_inbound_wh" default_focus="1" type="object" class="btn-primary"/>
+                    <button string="Cancel" class="btn-default" special="cancel" />
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

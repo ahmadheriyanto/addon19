@@ -181,6 +181,14 @@ except Exception:
         </field>
     </record>
 
+    <record id="action_import_ij" model="ir.actions.act_window">
+        <field name="name">Import - IJ / Putaway</field>
+        <field name="res_model">stock_picking_import_receipt</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="fulfillment.import_format_inbound_wh_form"/>
+        <field name="target">new</field>
+    </record>
+
     <!-- Action to open mobile scanner -->
     <record id="action_mobile_qr_scanner" model="ir.actions.act_url">
         <field name="name">Mobile QR Scanner</field>
@@ -194,15 +202,22 @@ except Exception:
               parent="stock.menu_stock_root"
               sequence="80"/>
 
-    <menuitem id="menu_incoming_staging"
-              name="Incoming Staging"
-              parent="menu_fulfillment_root"
-              action="action_incoming_staging"
-              sequence="10"/>
+        <menuitem id="menu_incoming_staging"
+                name="Incoming Staging"
+                parent="menu_fulfillment_root"
+                action="action_incoming_staging"
+                sequence="10"/>
+        
+        <menuitem
+                id="menu_import_inbound"
+                name="Import - IJ / Putaway"
+                parent="menu_fulfillment_root"
+                action="action_import_ij"
+                sequence="15"/>
 
-    <menuitem id="menu_mobile_qr_scanner"
-            name="Mobile QR Scanner"
-            parent="menu_fulfillment_root"
-            action="action_mobile_qr_scanner"
-            sequence="20"/>
+        <menuitem id="menu_mobile_qr_scanner"
+                name="Mobile QR Scanner"
+                parent="menu_fulfillment_root"
+                action="action_mobile_qr_scanner"
+                sequence="20"/>
 </odoo>

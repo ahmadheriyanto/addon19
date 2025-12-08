@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Product Template Form (only) -->
+    <record id="sh_product_qrcode_generator_product_tmpl_only_form" model="ir.ui.view">
+        <field name="name">sh.product.qrcode.generator.product.tmpl.only.form</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_only_form_view"/>
+        <field name="arch" type="xml">
+            <field name="barcode" position="after">
+                <!-- Use new modifiers: invisible expression -->
+                <field name="sh_qr_code" invisible="product_variant_count &gt; 1"/>
+                <field name="sh_qr_code_img" widget="image" invisible="product_variant_count &gt; 1"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Product Template Form: add stat button instead of header -->
+    <record id="sh_product_qrcode_generator_product_template_form_view" model="ir.ui.view">
+        <field name="name">sh.product.qrcode.generator.product.tmpl.form</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[contains(@class, 'oe_button_box')]" position="inside">
+                <button type="object"
+                        name="sh_action_open_label_layout_with_qr"
+                        class="oe_stat_button"
+                        icon="fa-qrcode"
+                        string="QR Labels"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Product Template Tree -->
+    <record id="sh_product_qrcode_generator_product_tmpl_tree" model="ir.ui.view">
+        <field name="name">sh.product.qrcode.generator.product.tmpl.tree</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_tree_view"/>
+        <field name="arch" type="xml">
+            <field name="active" position="after">
+                <field name="sh_qr_code"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Optional: Search view extension (keep simple, no attrs/states hacking) -->
+    <record id="sh_product_qrcode_generator_product_tmpl_search" model="ir.ui.view">
+        <field name="name">sh.product.qrcode.generator.product.tmpl.search</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_search_view"/>
+        <field name="arch" type="xml">
+            <!-- Add a dedicated filter for QR code -->
+            <xpath expr="//search" position="inside">
+                <filter string="QR Code" name="filter_qr" domain="[('sh_qr_code', '!=', False)]"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

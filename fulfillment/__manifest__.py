@@ -37,6 +37,7 @@ Long description of module's purpose
         'views/res_config_settings_views.xml',
         'views/remove_website_odoo_logo.xml',
         'views/product_category_views.xml',
+        'views/import_Format_Inbound_WH.xml',
         'views/incoming_staging_views.xml',
         'views/portal_api_key_templates.xml',
         'views/portal_api_key_shortcut.xml',

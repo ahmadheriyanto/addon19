@@ -1,3 +1,4 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_fulfillment_incoming_staging,fulfillment.incoming_staging,model_incoming_staging,base.group_user,1,1,1,1
 access_fulfillment_incoming_staging_product,fulfillment.incoming_staging_product,model_incoming_staging_product,base.group_user,1,1,1,1
+access_stock_picking_import_receipt,fulfillment.stock_picking_import_receipt,model_stock_picking_import_receipt,base.group_user,1,1,1,1
