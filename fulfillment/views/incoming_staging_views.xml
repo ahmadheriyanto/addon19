@@ -205,4 +205,9 @@ except Exception:
                 parent="menu_fulfillment_root"
                 action="action_mobile_qr_scanner"
                 sequence="20"/>
+
+    <menuitem id="menu_fulfillment_report_root"
+              name="Report"
+              parent="stock.menu_stock_root"
+              sequence="90"/>
 </odoo>

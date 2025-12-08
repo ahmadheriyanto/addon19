@@ -52,6 +52,8 @@ Long description of module's purpose
         'views/stock_backorder_confirmation_oos_view.xml',      
         'views/stock_picking_inherit_detailed_operations.xml',
         'views/stock_picking_type_form.xml',
+        'views/view_location_form.xml',
+        'wizard/ms_report_inbound_wizard.xml',        
     ],
     # only loaded in demonstration mode
     'demo': [
