@@ -1,22 +1,21 @@
+<!-- #DEV-010 -->
 <odoo>
 	<data>
 	
-	    <record id="ms_report_inbound_form_view" model="ir.ui.view">
-			<field name="name">ms.report.inbound.form</field>
-			<field name="model">ms.report.stock.inbound</field>
+	    <record id="ms_report_putaway_form_view" model="ir.ui.view">
+			<field name="name">ms.report.putaway.form</field>
+			<field name="model">ms.report.stock.putaway</field>
 			<field name="type">form</field>
 			<field name="arch" type="xml">
 				
-		        <form string="Stock Inbound Report">
+		        <form string="Putaway Report">
 	                <group>
 		        		<group>
 		                    <field name="product_ids" widget="many2many_tags" options="{'no_create':True, 'no_open':True}"/>
 		                    <field name="categ_ids" widget="many2many_tags" options="{'no_create':True, 'no_open':True}"/>
-							<!-- <field name="location_ids" domain="[('main_parent','=',True)]" widget="many2many_tags" options="{'no_create':True, 'no_open':True}"/> -->
-							<field name="location_ids" widget="many2many_tags" options="{'no_create':True, 'no_open':True}"/>
 							<field name="date_start"/>
 							<field name="date_end"/>
-							<field name="show_detail"/>
+							<field name="template_loc"/>
 		                </group>
 		        	</group>
 
@@ -29,16 +28,16 @@
 	    	</field>
 	    </record>
 		
-	    <record id="ms_action_report_inbound_xlsx" model="ir.actions.act_window">
-			<field name="name">Stock Inbound Report</field>
+	    <record id="ms_action_report_putaway_xlsx" model="ir.actions.act_window">
+			<field name="name">Putaway Report</field>
 			<field name="type">ir.actions.act_window</field>
-			<field name="res_model">ms.report.stock.inbound</field>
+			<field name="res_model">ms.report.stock.putaway</field>
 			<field name="view_mode">form</field>
-			<field name="view_id" ref="ms_report_inbound_form_view"/>
+			<field name="view_id" ref="ms_report_putaway_form_view"/>
 			<field name="target">new</field>
 	    </record>
 		
-		<menuitem id="ms_menu_report_inbound_xlsx" action="ms_action_report_inbound_xlsx" parent="fulfillment.menu_fulfillment_report_root"/>
+		<menuitem id="ms_menu_report_putaway_xlsx" action="ms_action_report_putaway_xlsx" parent="fulfillment.menu_fulfillment_report_root"/>
 	
 	</data>
 </odoo>

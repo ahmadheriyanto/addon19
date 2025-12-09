@@ -3,4 +3,6 @@ access_fulfillment_incoming_staging,fulfillment.incoming_staging,model_incoming_
 access_fulfillment_incoming_staging_product,fulfillment.incoming_staging_product,model_incoming_staging_product,base.group_user,1,1,1,1
 access_stock_picking_import_receipt,fulfillment.stock_picking_import_receipt,model_stock_picking_import_receipt,base.group_user,1,1,1,1
 access_ms_report_stock_inbound,fulfillment.ms_report_stock_inbound,model_ms_report_stock_inbound,base.group_user,1,1,1,1
+access_ms.report.stock.putaway,fulfillment.ms.report.stock.putaway,model_ms_report_stock_putaway,base.group_user,1,1,1,1
+
 

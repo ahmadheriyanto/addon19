@@ -1,3 +1,4 @@
+#DEV-010
 import xlsxwriter
 import base64
 from odoo import fields, models, api
@@ -10,32 +11,32 @@ import logging
 _logger = logging.getLogger(__name__)
 
 class MsReportStock(models.TransientModel):
-    _name = "ms.report.stock.inbound"
-    _description = "Stock Inbound Report.xlsx"
+    _name = "ms.report.stock.putaway"
+    _description = "Putaway Report.xlsx"
     
     @api.model
     def get_default_date_model(self):
         return pytz.UTC.localize(datetime.now()).astimezone(timezone(self.env.user.tz or 'UTC'))
-        
+    
     datas = fields.Binary('File', readonly=True)
     datas_fname = fields.Char('Filename', readonly=True)
-    product_ids = fields.Many2many('product.product', 'ms_report_stock_inbound_product_rel', 'ms_report_stock_inbound_id',
+    product_ids = fields.Many2many('product.product', 'ms_report_stock_putaway_product_rel', 'ms_report_stock_putaway_id',
         'product_id', 'Products')
-    categ_ids = fields.Many2many('product.category', 'ms_report_stock_inbound_categ_rel', 'ms_report_stock_inbound_id',
+    categ_ids = fields.Many2many('product.category', 'ms_report_stock_putaway_categ_rel', 'ms_report_stock_putaway_id',
         'categ_id', 'Categories')
-    location_ids = fields.Many2many('stock.location', 'ms_report_stock_inbound_location_rel', 'ms_report_stock_inbound_id',
-        'location_id', 'Locations')
+    #location_ids = fields.Many2many('stock.location', 'ms_report_stock_inbound_location_rel', 'ms_report_stock_inbound_id', 'location_id', 'Locations')
     date_start = fields.Date(string='Start Date')
     date_end = fields.Date(string='End Date')
-    show_detail = fields.Boolean(string='Show Detail')
+    #show_detail = fields.Boolean(string='Show Detail')
+    template_loc = fields.Many2one('stock.location',string = 'Location')
 
     def print_excel_report(self):
         data = self.read()[0]
         product_ids = data['product_ids']
         categ_ids = data['categ_ids']
-        location_ids = data['location_ids']
-        # Use user's language for JSONB translatable fields
-        lang = (self.env.user.lang or 'en_US') #.replace('_', '-')
+        #location_ids = data['location_ids']
+        lang = (self.env.user.lang or 'en_US')
+        
         # Get Filter Name
         product_filter_name = []
         if product_ids:
@@ -69,21 +70,21 @@ class MsReportStock(models.TransientModel):
 
         if categ_ids and (not product_ids):
             where_product_ids = " 1=2 "
+        
+        # Manage Location ids
+        where_putaway_picking_type_ids = " 1=1 "
+        putaway_picking_type = self.env['stock.picking.type'].search([('code','in',['incoming','internal'])])
+        putaway_picking_type_ids = [picking_type.id for picking_type in putaway_picking_type]
+        if putaway_picking_type_ids:
+            where_putaway_picking_type_ids = " sp.picking_type_id in %s" % str(tuple(putaway_picking_type_ids)).replace(',)', ')')
 
-        # DEV-014: Manage Location ids
-        inbound_where_location_ids = " 1=1 "
-        outbound_where_location_ids = " 1=1 "
-        if location_ids :
-            _loc_domain = []
-            for _locid in location_ids:
-                _loc = self.env['stock.location'].search([('id','=',_locid)])
-                _loc_domain.append(('parent_path', '=like', _loc.parent_path + '%'))
-            #_loc_domain.append(('usage', '=', 'transit'))
-            _locs = self.env['stock.location'].search(_loc_domain)
-            ids_location = [loc.id for loc in _locs]
-            inbound_where_location_ids = " sml.location_dest_id in %s"%str(tuple(ids_location)).replace(',)', ')')
-            outbound_where_location_ids = " sml.location_id in %s"%str(tuple(ids_location)).replace(',)', ')')
-        #>>
+        #raise UserError('TEST ERROR, where_putaway_picking_type_ids = %s' % where_putaway_picking_type_ids)
+
+        where_source_location_ids = " 1=1 "
+        source_picking_type = self.env['stock.picking.type'].search([('code','=','incoming')])
+        source_picking_type_default_location_ids = [picking_type.default_location_dest_id.id for picking_type in source_picking_type]
+        if source_picking_type_default_location_ids:
+            where_source_location_ids = " sml.location_id in %s" % str(tuple(source_picking_type_default_location_ids)).replace(',)', ')')
 
         # Manage Date Filter
         where_date_filter = " 1=1 "
@@ -93,48 +94,34 @@ class MsReportStock(models.TransientModel):
             where_date_filter = ' sml.date::timestamp::date<=\'%s\' ' % (self.date_end)
         if self.date_start and self.date_end:
             where_date_filter = ' sml.date::timestamp::date>=\'%s\' and sml.date::timestamp::date<=\'%s\' ' % (self.date_start,self.date_end)
+
+        # Manage Location template: BY / DC
+        where_loc_template = " (1 = 1) "
+        if self.template_loc:
+            where_loc_template = f" dest_loc.complete_name like '%{self.template_loc.name}%' "
         
         datetime_string = self.get_default_date_model().strftime("%Y-%m-%d %H:%M:%S")
         date_string = self.get_default_date_model().strftime("%Y-%m-%d")
         
-        if self.show_detail:
-            report_name = 'Stock Inbound Report (Detail)'
-        else:
-            report_name = 'Stock Inbound Report'
+        report_name = 'Putaway Report'
         
         filename = '%s %s'%(report_name,date_string)
         
         columns = []
-        if self.show_detail:
-            columns = [
+        columns = [
                 ('No', 5, 'no', 'no'),
                 ('Date', 20, 'datetime', 'char'),
                 ('PO Number', 30, 'char', 'char'),
-                ('Customer', 30, 'char', 'char'), #2023.11.28
-                ('Partner Type', 3, 'char', 'char'), #2023.11.28
+                ('Source Location', 20, 'char_loc', 'char'),
                 ('Product Code', 30, 'char', 'char'),
                 ('Product Name', 80, 'char', 'char'),
                 ('Batch Number', 30, 'char', 'char'),
-                ('Expired Date', 30, 'datetime', 'char'),
-                ('Document No.', 30, 'char', 'char'),
-                ('Qty', 20, 'number', 'number'), #2021.12.11
+                ('Qty', 20, 'number', 'number'),
+                ('Exp. Date', 20, 'datetime', 'char'),
+                ('Destination Location', 20, 'char_loc', 'char'),
                 ('Product Volume (CBM)', 30, 'float', 'float'),
-                ('Product Weight (KGS)', 30, 'number', 'number'), #2021.12.11
-                ('Transfer No.', 30, 'char', 'char'),
-                ('Transfer Name', 30, 'char', 'char'),
-                ('Transfer Type', 30, 'char', 'char'),
-                ('Stock Move Line Id', 30, 'no', 'no'),
-                ('Stock Move Id', 30, 'no', 'no')
-            ]
-        else:
-            columns = [
-                ('No', 5, 'no', 'no'),
-                ('Date', 20, 'datetime', 'char'),
-                ('PO Number', 30, 'char', 'char'),
-                ('Customer', 30, 'char', 'char'), #2023.11.28
-                ('Qty', 20, 'number', 'number'), #2021.12.11
-                ('Total Product Volume (CBM)', 30, 'float', 'float'),
-                ('Total Product Weight (KGS)', 30, 'number', 'number') #2021.12.11
+                ('Product Weight (KGS)', 30, 'number', 'number'),
+                ('Document No.', 30, 'char', 'char')
             ]
             
         datetime_format = '%d %B %Y' #'%Y-%m-%d %H:%M:%S'
@@ -149,189 +136,95 @@ class MsReportStock(models.TransientModel):
         else :
             hours = str(hours) + ' hour'
         
-        query = ""
-        if self.show_detail:
-            query = f"""
-                select join_tbl.trans_date,
-                    join_tbl.po_no,
-                    join_tbl.res_name,
-                    join_tbl.partner_type,
-                    join_tbl.product_code,
-                    join_tbl.product_name,
-                    join_tbl.batch_no,
-                    join_tbl.expired_date,
-                    join_tbl.document_no,
-                    join_tbl.qty,
-                    join_tbl.volume,
-                    join_tbl.weight,
-                    join_tbl.transfer_no,
-                    join_tbl.transfer_name,
-                    join_tbl.transfer_type,
-                    join_tbl.stock_move_line_id,
-                    join_tbl.stock_move_id                      
-                from
-                (   
+        query = f"""   
                     select sml.date::timestamp::date as trans_date,
                         sp.origin as po_no,
-                        res.name as res_name,
+                        source_loc.complete_name as source_loc,
                         prod.default_code as product_code,
                         pt.name->>'{lang}' as product_name,
                         lot.name as batch_no,
-                        lot.use_date::timestamp::date as expired_date,
-                        sp.name as document_no,
                         sml.quantity as qty,
+
+                        lot.use_date::timestamp::date as exp_date,
+                        
+                        dest_loc.complete_name as destination_loc,
                         prod.volume * sml.quantity as volume,
                         prod.weight * sml.quantity as weight,
-                        sp.name as transfer_no,
-                        spt.name->>'{lang}' as transfer_name,
-                        spt.code as transfer_type,
-                        sml.id as stock_move_line_id,
-                        sml.move_id as stock_move_id,
-                        sp.partner_type as partner_type  
+                        sp.name,
+                        COALESCE(sml.move_id,0) as sml_move_id 
                     from 
                         stock_move_line sml 
                     inner join
                         stock_lot lot on sml.lot_id = lot.id
+                    left join 
+                        stock_picking sp on sml.picking_id = sp.id
                     left join
-                        stock_move sm on sml.move_id = sm.id
-                    left join 
-                        stock_picking sp on sml.picking_id = sp.id 
-                    left join 
-                        res_partner res on res.id = sp.partner_id
+                        stock_location source_loc on sml.location_id = source_loc.id 
+                    left join
+                        stock_location dest_loc on sml.location_dest_id = dest_loc.id 
                     left join 
                         product_product prod on prod.id=sml.product_id
                     inner join
                         product_template pt on prod.product_tmpl_id = pt.id
-                    left join
-                        stock_picking_type spt on spt.id = sp.picking_type_id
                     left join 
                         stock_scrap scrap on scrap.picking_id = sp.id
-                    where COALESCE(sm.origin_returned_move_id,0) = 0 and sml.state='done' and spt.code='incoming' and scrap.id IS NULL and %s and %s and %s 
-                    
-                    UNION ALL
-                    
-                    select sml.date::timestamp::date as trans_date,
-                        sp.origin as po_no,
-                        res.name as res_name,
-                        prod.default_code as product_code,
-                        pt.name->>'{lang}' as product_name,
-                        lot.name as batch_no,
-                        lot.use_date::timestamp::date as expired_date,
-                        sp.name as document_no,
-                        -1 * sml.quantity as qty,
-                        -1 * prod.volume * sml.quantity as volume,
-                        -1 * prod.weight * sml.quantity as weight,
-                        sp.name as transfer_no,
-                        spt.name->>'{lang}' as transfer_name,
-                        spt.code as transfer_type,
-                        sml.id as stock_move_line_id,
-                        sml.move_id as stock_move_id,
-                        sp.partner_type as partner_type  
-                    from 
-                        stock_move sm 
-                    inner join 
-                        stock_move_line sml on sm.id = sml.move_id  
-                    inner join
-                        stock_lot lot on sml.lot_id = lot.id 
-                    left join 
-                        stock_picking sp on sml.picking_id = sp.id 
-                    left join 
-                        res_partner res on res.id = sp.partner_id
-                    left join 
-                        product_product prod on prod.id=sml.product_id 
-                    inner join
-                        product_template pt on prod.product_tmpl_id = pt.id 
-                    left join
-                        stock_picking_type spt on spt.id = sp.picking_type_id 
-                    where COALESCE(sm.origin_returned_move_id,0) <> 0 and sml.state='done' and spt.code='outgoing' and %s and %s and %s 
-                    
-                ) as join_tbl
-                order by join_tbl.trans_date,join_tbl.po_no                        
-            """           
-        else:
-            query = f"""
-                select join_tbl.trans_date,
-                    join_tbl.po_no,
-                    join_tbl.res_name,
-                    sum(join_tbl.qty) as qty,
-                    sum(join_tbl.volume) as volume,
-                    sum(join_tbl.weight) as weight 
-                from 
-                (                     
-                    select sml.date::timestamp::date as trans_date,
-                        sp.origin as po_no,
-                        res.name as res_name,
-                        sml.quantity as qty,
-                        prod.volume * sml.quantity as volume,
-                        prod.weight * sml.quantity as weight 
-                    from 
-                        stock_move_line sml 
-                    inner join
-                        stock_lot lot on sml.lot_id = lot.id
-                    left join
-                        stock_move sm on sml.move_id = sm.id
-                    left join 
-                        stock_picking sp on sml.picking_id = sp.id
-                    left join 
-                        res_partner res on res.id = sp.partner_id 
-                    left join 
-                        product_product prod on prod.id=sml.product_id
-                    inner join
-                        product_template pt on prod.product_tmpl_id = pt.id
-                    left join
-                        stock_picking_type spt on spt.id = sp.picking_type_id
-                    left join 
-                        stock_scrap scrap on scrap.picking_id = sp.id 
-                    where COALESCE(sm.origin_returned_move_id,0) = 0 and sml.state='done' and spt.code='incoming' and scrap.id IS NULL and %s and %s and %s 
-                    
-                    UNION ALL
-                    
-                    select sml.date::timestamp::date as trans_date,
-                        sp.origin as po_no,
-                        res.name as res_name,
-                        -1 * sml.quantity as qty,
-                        -1 * prod.volume * sml.quantity as volume,
-                        -1 * prod.weight * sml.quantity as weight 
-                    from 
-                        stock_move sm 
-                    inner join 
-                        stock_move_line sml on sm.id = sml.move_id  
-                    inner join
-                        stock_lot lot on sml.lot_id = lot.id 
-                    left join 
-                        stock_picking sp on sml.picking_id = sp.id
-                    left join 
-                        res_partner res on res.id = sp.partner_id 
-                    left join 
-                        product_product prod on prod.id=sml.product_id 
-                    inner join
-                        product_template pt on prod.product_tmpl_id = pt.id 
-                    left join
-                        stock_picking_type spt on spt.id = sp.picking_type_id 
-                    where COALESCE(sm.origin_returned_move_id,0) <> 0 and sml.state='done' and spt.code='outgoing' and %s and %s and %s 
-                    
-                ) as join_tbl 
-                group by join_tbl.trans_date,join_tbl.po_no,join_tbl.res_name;
-            """
+                    where sml.state='done' and %s and %s and scrap.id IS NULL and %s and %s and %s
+            """            
         
-        #raise UserError(query % (where_date_filter,where_product_ids,self.env.user.company_id.id))
+        retur_query = "select sml.date::timestamp::date as trans_date,"
+        retur_query += " sp_origin.origin as po_no,"
+        retur_query += " source_loc.complete_name as source_loc,"
+        retur_query += " prod.default_code as product_code,"
+        retur_query += f" pt.name->>'{lang}' as product_name,"
+        retur_query += " lot.name as batch_no,"
+        retur_query += " sml.quantity as qty,"
 
-        self.env.cr.execute(query % (where_date_filter,where_product_ids,inbound_where_location_ids, where_date_filter,where_product_ids,outbound_where_location_ids)) #,self.env.user.company_id.id)) #DEV-014: add location filter
+        retur_query += " lot.use_date::timestamp::date as exp_date,"
+
+        retur_query += " dest_loc.complete_name as destination_loc,"
+        retur_query += " prod.volume * sml.quantity as volume,"
+        retur_query += " prod.weight * sml.quantity as weight,"
+        retur_query += " CONCAT(sp.name, ' - ', sp.origin) as sp_name,"
+        retur_query += " COALESCE(sml.move_id,0) as sml_move_id "
+        retur_query += " from "
+        retur_query += " stock_move_line sml "
+        retur_query += " inner join"
+        retur_query += " stock_lot lot on sml.lot_id = lot.id"
+        retur_query += " left join "
+        retur_query += " stock_picking sp on sml.picking_id = sp.id"
+        retur_query += " left join"
+        retur_query += " stock_location source_loc on sml.location_id = source_loc.id "
+        retur_query += " left join"
+        retur_query += " stock_location dest_loc on sml.location_dest_id = dest_loc.id "
+        retur_query += " left join "
+        retur_query += " product_product prod on prod.id=sml.product_id"
+        retur_query += " inner join"
+        retur_query += " product_template pt on prod.product_tmpl_id = pt.id"
+        retur_query += " left join "
+        retur_query += " stock_scrap scrap on scrap.picking_id = sp.id"
+        retur_query += " left join"
+        retur_query += " stock_move sm on sm.id = sml.move_id"
+        retur_query += " left join "
+        retur_query += " stock_move sm_origin on sm_origin.id = sm.origin_returned_move_id"
+        retur_query += " left join "
+        retur_query += " stock_picking sp_origin on sp_origin.id = sm_origin.picking_id"
+        retur_query += " where sml.state='done' and sml.id = %s"
+
+        #raise UserError(query % (where_source_location_ids, where_putaway_picking_type_ids, where_date_filter, where_product_ids))
+
+        self.env.cr.execute(query % (where_source_location_ids, where_putaway_picking_type_ids, where_date_filter, where_product_ids, where_loc_template)) #,self.env.user.company_id.id))
         result = self.env.cr.fetchall()
         if not result:
-            raise UserError('Data for Stock Inbound Report does not exist')
+            raise UserError('Data for Putaway Report does not exist')
         fp = BytesIO()
         workbook = xlsxwriter.Workbook(fp)
         wbf, workbook = self.add_workbook_format(workbook)
 
         worksheet = workbook.add_worksheet(report_name)
         
-        if self.show_detail:
-            worksheet.merge_range('A2:Q3', report_name, wbf['title_doc']) #2023.11.28
-        else:
-            worksheet.merge_range('A2:G3', report_name, wbf['title_doc']) #2023.11.28
+        worksheet.merge_range('A2:K3', report_name, wbf['title_doc'])
         
-        row = 5
+        row = 4
 
         col = 0
         for column in columns :
@@ -339,17 +232,31 @@ class MsReportStock(models.TransientModel):
             column_width = column[1]
             column_type = column[2]
             worksheet.set_column(col,col,column_width)
-            worksheet.write(row-1, col, column_name, wbf['header_orange'])
+            worksheet.write(row, col, column_name, wbf['header_orange'])
 
             col += 1
         
         row += 1
-        row1 = row
         no = 1
 
         column_float_number = {}
+        sml_retur_id = []
+
         for res in result :
-            #print("\n res",res)
+            """
+            if res[11]:
+                refid = int(res[11])
+                returs = self.env['stock.move'].search([('origin_returned_move_id','=',refid)])
+                if returs:
+                    for ret in returs:
+                        stock_move_lines = self.env['stock.move.line'].search([('move_id','=',ret.id)])
+                        if stock_move_lines:
+                            for sml in stock_move_lines:
+                                if sml.id:
+                                    smlid = sml.id
+                                    if not (smlid in sml_retur_id):                                        
+                                        sml_retur_id.append(smlid)
+            """
             col = 0
             for column in columns:
                 column_name = column[0]
@@ -357,6 +264,9 @@ class MsReportStock(models.TransientModel):
                 column_type = column[2]
                 if column_type == 'char' :
                     col_value = res[col-1] if res[col-1] else ''
+                    wbf_value = wbf['content']
+                elif column_type == 'char_loc':
+                    col_value = self.get_location_name(res[col-1]) if res[col-1] else ''
                     wbf_value = wbf['content']
                 elif column_type == 'no' :
                     col_value = no
@@ -372,16 +282,64 @@ class MsReportStock(models.TransientModel):
                         wbf_value = wbf['content_number']
                     column_float_number[col] = column_float_number.get(col, 0) + col_value
 
-                try:
-                    worksheet.write(row-1, col, col_value, wbf_value)
-                except Exception as e:
-                    print(f'{e} , col_value={col_value}, row={row}, col={col}')                
+                worksheet.write(row, col, col_value, wbf_value)
 
                 col+=1
             
+            # Write retur
+            if res[12]:
+                refid = int(res[12])
+                returs = self.env['stock.move'].search([('origin_returned_move_id','=',refid)])
+                if returs:
+                    for ret in returs:
+                        stock_move_lines = self.env['stock.move.line'].search([('move_id','=',ret.id)])
+                        if stock_move_lines:
+                            for sml in stock_move_lines:
+                                if sml.id:
+                                    rtv = retur_query % sml.id
+                                    self.env.cr.execute(rtv) #,self.env.user.company_id.id))
+                                    rtv_result = self.env.cr.fetchall()
+                                    if rtv_result:
+                                        for rtv_res in rtv_result :
+                                            row += 1
+                                            no+=1
+                                            col = 0
+                                            for column in columns:
+                                                column_name = column[0]
+                                                column_width = column[1]
+                                                column_type = column[2]
+                                                if column_type == 'char' :
+                                                    col_value = rtv_res[col-1] if rtv_res[col-1] else ''
+                                                    wbf_value = wbf['content']
+                                                elif column_type == 'char_loc':
+                                                    col_value = self.get_location_name(rtv_res[col-1]) if rtv_res[col-1] else ''
+                                                    wbf_value = wbf['content']
+                                                elif column_type == 'no' :
+                                                    col_value = no
+                                                    wbf_value = wbf['content']
+                                                elif column_type == 'datetime':
+                                                    col_value = rtv_res[col - 1].strftime(datetime_format) if rtv_res[col - 1] else ''  #'%Y-%m-%d %H:%M:%S'
+                                                    wbf_value = wbf['content']
+                                                else :
+                                                    col_value = -1 * rtv_res[col-1] if rtv_res[col-1] else 0
+                                                    if column_type == 'float' :
+                                                        wbf_value = wbf['content_float']
+                                                    else : #number
+                                                        wbf_value = wbf['content_number']
+                                                    column_float_number[col] = column_float_number.get(col, 0) + col_value
+
+                                                worksheet.write(row, col, col_value, wbf_value)
+
+                                                col+=1
+
+
             row+=1
             no+=1
         
+
+        # Manage Retur
+        # <<<>>>>
+
         worksheet.merge_range('A%s:B%s'%(row,row), 'Grand Total', wbf['total_orange'])
         for x in range(len(columns)) :
             if x in (0,1) :
@@ -423,6 +381,23 @@ class MsReportStock(models.TransientModel):
         }
 
 
+    def get_location_name(self,complete_name):
+        loca_qrcode = '';
+        loc_list = complete_name.split('/')
+        #raise UserError("loc_list = %s, len(loc_list) = %s" % (loc_list,len(loc_list)))
+        if len(loc_list) == 0:
+            loca_qrcode = complete_name
+        else:
+            n = 0
+            for loc in loc_list:
+                n += 1
+                if n >= 2:
+                    if loca_qrcode == '':
+                        loca_qrcode = loc
+                    else:
+                        loca_qrcode += '/' + loc
+        return loca_qrcode
+    
     def add_workbook_format(self, workbook):
         #<<2021.12.11
         excel_param = self.env['ir.config_parameter'].search([('key','=','excel.font.name')])
