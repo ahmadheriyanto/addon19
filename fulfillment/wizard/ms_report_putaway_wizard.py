@@ -115,6 +115,7 @@ class MsReportStock(models.TransientModel):
                 ('Source Location', 20, 'char_loc', 'char'),
                 ('Product Code', 30, 'char', 'char'),
                 ('Product Name', 80, 'char', 'char'),
+                ('Partner Type', 3, 'char', 'char'),
                 ('Batch Number', 30, 'char', 'char'),
                 ('Qty', 20, 'number', 'number'),
                 ('Exp. Date', 20, 'datetime', 'char'),
@@ -142,6 +143,7 @@ class MsReportStock(models.TransientModel):
                         source_loc.complete_name as source_loc,
                         prod.default_code as product_code,
                         pt.name->>'{lang}' as product_name,
+                        sp.partner_type as partner_type,
                         lot.name as batch_no,
                         sml.quantity as qty,
 
@@ -176,6 +178,7 @@ class MsReportStock(models.TransientModel):
         retur_query += " source_loc.complete_name as source_loc,"
         retur_query += " prod.default_code as product_code,"
         retur_query += f" pt.name->>'{lang}' as product_name,"
+        retur_query += " sp_origin.partner_type as partner_type,"
         retur_query += " lot.name as batch_no,"
         retur_query += " sml.quantity as qty,"
 
@@ -287,8 +290,8 @@ class MsReportStock(models.TransientModel):
                 col+=1
             
             # Write retur
-            if res[12]:
-                refid = int(res[12])
+            if res[13]:
+                refid = int(res[13])
                 returs = self.env['stock.move'].search([('origin_returned_move_id','=',refid)])
                 if returs:
                     for ret in returs:
