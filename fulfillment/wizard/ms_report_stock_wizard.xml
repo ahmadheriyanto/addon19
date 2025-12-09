@@ -1,0 +1,51 @@
+<odoo>
+	<data>
+	
+	    <record id="ms_report_stock_form_view" model="ir.ui.view">
+			<field name="name">ms.report.stock.form</field>
+			<field name="model">ms.report.stock</field>
+			<field name="type">form</field>
+			<field name="arch" type="xml">
+				
+		        <form string="Stock Report">
+	                <group>
+		        		<group>
+							<field name="lot_ids" widget="many2many_tags" options="{'no_create':True, 'no_open':True}"/>
+		                    <field name="product_ids" widget="many2many_tags" options="{'no_create':True, 'no_open':True}"/>
+		                    <field name="categ_ids" widget="many2many_tags" options="{'no_create':True, 'no_open':True}"/>
+		                </group>
+		                <group>
+							<!--<< DEV-014: add filter as main parent -->
+		                	<!-- <field name="location_ids" domain="['|',('usage','=','internal'),('usage','=','transit')]" widget="many2many_tags" options="{'no_create':True, 'no_open':True}"/> -->
+							<field name="location_ids" domain="['|',('usage','in',['internal','transit']),('main_parent','=',True)]" widget="many2many_tags" options="{'no_create':True, 'no_open':True}"/>
+							<!-->>-->
+							
+							<!-- DEV-002 -->
+							<field name="expired_on"/>
+							<field name="expired_until"/>
+							<!-- -->
+		                </group>
+		        	</group>
+
+	                <footer>
+	                    <button name="print_excel_report_from_current_model" string="Export" type="object" class="oe_highlight"/> or 
+	                    <button string="Cancel" class="oe_link" special="cancel"/>
+	                </footer>
+		          	
+		        </form>
+	    	</field>
+	    </record>
+		
+	    <record id="ms_action_report_stock_xlsx" model="ir.actions.act_window">
+			<field name="name">Stock Report</field>
+			<field name="type">ir.actions.act_window</field>
+			<field name="res_model">ms.report.stock</field>
+			<field name="view_mode">form</field>
+			<field name="view_id" ref="ms_report_stock_form_view"/>
+			<field name="target">new</field>
+	    </record>
+		
+		<menuitem id="ms_menu_report_stock_xlsx" action="ms_action_report_stock_xlsx" parent="fulfillment.menu_fulfillment_report_root"/>
+	
+	</data>
+</odoo>

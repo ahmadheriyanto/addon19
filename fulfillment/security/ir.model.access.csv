@@ -5,6 +5,8 @@ access_stock_picking_import_receipt,fulfillment.stock_picking_import_receipt,mod
 access_ms_report_stock_inbound,fulfillment.ms_report_stock_inbound,model_ms_report_stock_inbound,base.group_user,1,1,1,1
 access_ms.report.stock.putaway,fulfillment.ms.report.stock.putaway,model_ms_report_stock_putaway,base.group_user,1,1,1,1
 access_ms.stock.picking.import.receipt.fromdoc,fulfillment.stock.picking.import.receipt.fromdoc,model_stock_picking_import_receipt_fromdoc,base.group_user,1,1,1,1
+access_ms.report.stock,fulfillment.ms.report.stock,model_ms_report_stock,base.group_user,1,1,1,1
+
 
 
 
