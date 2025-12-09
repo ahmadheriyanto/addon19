@@ -356,7 +356,7 @@ class ImportReceiptLine(models.TransientModel):
     def import_format_outbound_wh(self):
         if not self.upload_file:
             raise UserError(_('Lookup xls excel file before upload'))
-        mpath = get_module_path('import_excel_stockmove')
+        mpath = get_module_path('fulfillment')
         
         # out_file_name = 'inbound.xls'
         now = datetime.now()
@@ -514,10 +514,11 @@ class ImportReceiptLine(models.TransientModel):
                         'location_dest_id': stock_picking_find.location_dest_id.id,
                         'picking_type_id': stock_picking_find.picking_type_id.id,
                         'packing_list_no': packing_list_no,
-                        'packing_list_city': packing_list_city,
+                        # 'packing_list_city': packing_list_city,
                         'picking_id': stock_picking_find.id,
-                        'suggest_lot_id': check_lot.id
+                        'lot_ids': [(6, 0, check_lot.ids)],
                     })
+                    
 
                     # Manage packing_list_no into header [origin field]
                     if stock_picking_find.origin:

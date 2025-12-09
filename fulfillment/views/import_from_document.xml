@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="import_format_excel" model="ir.ui.view">
+        <field name="name">import_format_inbound_wh_fromdoc</field>
+        <field name="model">stock.picking.import.receipt.fromdoc</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <div><label for="upload_file" string="Click 'Upload your file' button, after that click Upload Button : "/></div>
+                    <div><field name="upload_file"/></div>
+                </group>
+                <footer>
+                    <button string="Upload" name="import_format_excel" default_focus="1" type="object" class="btn-primary"/>
+                    <button string="Cancel" class="btn-default" special="cancel" />
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_import_format_excel" model="ir.actions.act_window">
+        <field name="name">Import from Excel</field>
+        <field name="res_model">stock.picking.import.receipt.fromdoc</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="import_format_excel"/>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="stock.model_stock_picking"/>
+    </record>
+
+</odoo>

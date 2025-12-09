@@ -16,3 +16,4 @@ from . import stock_picking_route_copy
 from . import stock_move_line
 from . import res_users
 from . import stock_location
+from . import stock_picking_line_import_excel_fromdoc

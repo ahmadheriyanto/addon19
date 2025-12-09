@@ -53,6 +53,7 @@ Long description of module's purpose
         'views/stock_picking_inherit_detailed_operations.xml',
         'views/stock_picking_type_form.xml',
         'views/view_location_form.xml',
+        'views/import_from_document.xml',
         'wizard/ms_report_inbound_wizard.xml',      
         'wizard/ms_report_putaway_wizard.xml',  
     ],
