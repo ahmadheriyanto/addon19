@@ -40,6 +40,11 @@ class MsReportStock(models.TransientModel):
     
     expired_until = fields.Char(compute='_compute_expired_date_period', string="Expired until", readonly=True)
     #>>
+    room = fields.Selection([
+        ('all', 'All Rooms'),
+        ('dry', 'Dry Room'),
+        ('cool', 'Cool Room')        
+        ], string='Room', default='all')
     
     #<<DEV-002
     @api.depends('expired_on')
@@ -172,7 +177,12 @@ class MsReportStock(models.TransientModel):
             ids_location = [loc.id for loc in _locs]
             where_location_ids = " quant.location_id in %s"%str(tuple(ids_location)).replace(',)', ')')
             #>>
-        
+
+        if self.room == 'cool':
+            where_location_ids += " AND loc.x_studio_cool_room = true "
+        elif self.room == 'dry':
+            where_location_ids += " AND (loc.x_studio_cool_room = false or loc.x_studio_cool_room IS NULL) "
+
         self._print_excel_report(where_product_ids, where_location_ids)
         
         filename = self.datas_fname + '%2Exlsx'
@@ -339,7 +349,7 @@ class MsReportStock(models.TransientModel):
                         wbf_value = wbf['content_float']
                     else : #number
                         wbf_value = wbf['content_number']
-                    # column_float_number[col] = column_float_number.get(col, 0) + col_value
+                    column_float_number[col] = column_float_number.get(col, 0) + col_value
 
                 worksheet.write(row-1, col, col_value, wbf_value)
 

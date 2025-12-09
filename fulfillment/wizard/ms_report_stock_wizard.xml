@@ -13,6 +13,7 @@
 							<field name="lot_ids" widget="many2many_tags" options="{'no_create':True, 'no_open':True}"/>
 		                    <field name="product_ids" widget="many2many_tags" options="{'no_create':True, 'no_open':True}"/>
 		                    <field name="categ_ids" widget="many2many_tags" options="{'no_create':True, 'no_open':True}"/>
+							<field name="room"/>		                	
 		                </group>
 		                <group>
 							<!--<< DEV-014: add filter as main parent -->
