@@ -2,3 +2,4 @@ from . import stock_picking_line_import_excel
 from . import ms_report_inbound_wizard
 from . import ms_report_putaway_wizard
 from . import ms_report_stock_wizard
+from . import ms_report_outbound_wizard

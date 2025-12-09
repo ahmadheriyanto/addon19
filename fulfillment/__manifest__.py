@@ -56,7 +56,8 @@ Long description of module's purpose
         'views/import_from_document.xml',
         'wizard/ms_report_inbound_wizard.xml',      
         'wizard/ms_report_putaway_wizard.xml',
-        'wizard/ms_report_stock_wizard.xml',  
+        'wizard/ms_report_stock_wizard.xml',
+        'wizard/ms_report_outbound_wizard.xml',  
     ],
     # only loaded in demonstration mode
     'demo': [

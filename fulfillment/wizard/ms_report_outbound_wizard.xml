@@ -1,0 +1,44 @@
+<odoo>
+	<data>
+	
+	    <record id="ms_report_outbound_form_view" model="ir.ui.view">
+			<field name="name">ms.report.outbound.form</field>
+			<field name="model">ms.report.stock.outbound</field>
+			<field name="type">form</field>
+			<field name="arch" type="xml">
+				
+		        <form string="Stock outbound Report">
+	                <group>
+		        		<group>
+		                    <field name="product_ids" widget="many2many_tags" options="{'no_create':True, 'no_open':True}"/>
+		                    <field name="categ_ids" widget="many2many_tags" options="{'no_create':True, 'no_open':True}"/>
+							<field name="location_ids" widget="many2many_tags" options="{'no_create':True, 'no_open':True}"/> <!-- DEV-014 -->
+							<field name="date_start"/>
+							<field name="date_end"/>
+							<field name="show_detail"/>
+							<field name="ungroup"/>
+		                </group>
+		        	</group>
+
+	                <footer>
+	                    <button name="print_excel_report" string="Export" type="object" class="oe_highlight"/> or 
+	                    <button string="Cancel" class="oe_link" special="cancel"/>
+	                </footer>
+		          	
+		        </form>
+	    	</field>
+	    </record>
+		
+	    <record id="ms_action_report_outbound_xlsx" model="ir.actions.act_window">
+			<field name="name">Stock outbound Report</field>
+			<field name="type">ir.actions.act_window</field>
+			<field name="res_model">ms.report.stock.outbound</field>
+			<field name="view_mode">form</field>
+			<field name="view_id" ref="ms_report_outbound_form_view"/>
+			<field name="target">new</field>
+	    </record>
+		
+		<menuitem id="ms_menu_report_outbound_xlsx" action="ms_action_report_outbound_xlsx" parent="fulfillment.menu_fulfillment_report_root"/>
+	
+	</data>
+</odoo>
