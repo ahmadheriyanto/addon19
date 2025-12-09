@@ -316,8 +316,8 @@ class MsReportStock(models.TransientModel):
         
         #raise UserError(query % (where_date_filter,where_product_ids,self.env.user.company_id.id))
 
-        self._cr.execute(query % (where_date_filter,where_product_ids,inbound_where_location_ids, where_date_filter,where_product_ids,outbound_where_location_ids)) #,self.env.user.company_id.id)) #DEV-014: add location filter
-        result = self._cr.fetchall()
+        self.env.cr.execute(query % (where_date_filter,where_product_ids,inbound_where_location_ids, where_date_filter,where_product_ids,outbound_where_location_ids)) #,self.env.user.company_id.id)) #DEV-014: add location filter
+        result = self.env.cr.fetchall() #self._cr.fetchall()
         if not result:
             raise UserError('Data for Stock Inbound Report does not exist')
         fp = BytesIO()
