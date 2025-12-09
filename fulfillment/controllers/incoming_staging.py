@@ -71,7 +71,7 @@ class IncomingStagingAPI(http.Controller):
             )
 
         # Required top-level fields (type may be 'inbound' or 'forder')
-        required = ['resi_no', 'type', 'datetime_string', 'products']
+        required = ['resi_no', 'type', 'datetime_string', 'products', 'target_market']
         for f in required:
             if f not in data:
                 return Response(
@@ -235,12 +235,19 @@ class IncomingStagingAPI(http.Controller):
             #>>
 
         # Build vals for create; include principal_* only when present (and they are required for 'forder' by earlier check)
+        target_market = (data['target_market'] or '').lower().strip()
+        if not target_market:
+            return Response(json.dumps({'error': f'target_market is required and cannot be empty'}),
+                                status=400, content_type='application/json;charset=utf-8', headers=headers)
+        if not target_market in ['b2b','b2c']:
+            return Response(json.dumps({'error': f'target_market must be either "B2B" or "B2C"'}),
+                                status=400, content_type='application/json;charset=utf-8', headers=headers)
         vals = {
             'transaction_no': data['resi_no'],
             'type': data['type'],
             'datetime_string': data['datetime_string'],
             'partner_id': partner_id,
-            'partner_type': partner.partner_type,
+            'partner_type': target_market,
             'products': [(0, 0, pl) for pl in product_lines],
             'status': 'open',
         }
