@@ -132,7 +132,7 @@ class ImportReceiptLine(models.TransientModel):
 
                 if not (row['PLS NUMBER'] == ''):
                     move_line.update({
-                        'packing_list_no': row['PLS NUMBER'],
+                        'origin': row['PLS NUMBER'],
                     })
 
                 if not (row['SOURCE'] == ''):
@@ -167,11 +167,9 @@ class ImportReceiptLine(models.TransientModel):
                 stock_move = stock_picking.move_ids.with_context(ctx).create(move_line)
 
                 if not (row['PLS NUMBER'] == ''):
-                    if stock_picking.origin:
-                        if stock_picking.origin.find(row['PLS NUMBER']) == -1:
-                            stock_picking.origin = stock_picking.origin + '|' + row['PLS NUMBER']
-                    else:
-                        stock_picking.origin = row['PLS NUMBER']
+                    stock_picking.update({
+                        'origin': row['PLS NUMBER'],
+                    })
 
                 if row['CUSTOMER NAME']:
                     stock_picking.update({
