@@ -675,6 +675,8 @@ class IncomingStagingStockReceipt(models.Model):
 
         for rec in self.sudo():
             try:
+                company = rec.sudo().partner_id.company_id or self.env.company
+
                 if not (rec.status == 'open' and rec.type == 'inbound'):
                     msg = f"Skipped staging {rec.id}: status={rec.status} type={rec.type}"
                     _logger.info(msg)
@@ -701,9 +703,9 @@ class IncomingStagingStockReceipt(models.Model):
                 # Resolve picking type id from system parameter
                 param_val = False
                 if rec.partner_type == 'b2b':
-                    param_val = self.env['ir.config_parameter'].sudo().get_param('fulfillment.operationtype.receipt_id')
+                    param_val = company.sudo().fulfillment_default_operation_type_receipt_id
                 if rec.partner_type == 'b2c':
-                    param_val = self.env['ir.config_parameter'].sudo().get_param('fulfillment.operationtype.receipt2_id')
+                    param_val = company.sudo().fulfillment_default_operation_type_receipt2_id
                 if not param_val:
                     raise ValidationError("Default receipt operation type is not configured (fulfillment.operationtype.receipt_id).")
                 try:
