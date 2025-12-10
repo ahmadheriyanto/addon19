@@ -207,6 +207,7 @@ class MsReportStock(models.TransientModel):
             ('Product Category', 20, 'char', 'char'),
             ('Location', 30, 'char', 'char'),
             ('Room', 10, 'char', 'char'),
+            ('Partner Type', 10, 'char', 'char'),
             ('Product Volume (CBM)', 20, 'float', 'float'),
             ('Product Weight (KGS)', 20, 'float', 'float'),
             ('Batch', 30, 'char', 'char'),
@@ -234,7 +235,7 @@ class MsReportStock(models.TransientModel):
         
         # change : quant.in_date + interval '%s' as date_in,
         query = f"""
-            SELECT TBL1.productno, TBL1.product, TBL1.prod_categ, TBL1.location, TBL1.room, prod2.volume, prod2.weight, TBL1.lotserial, LOT2.use_date + interval '%s' as expired_date, TBL1.date_in, TBL1.aging, TBL1.total_product, TBL1.stock, TBL1.reserved, TBL1.volume, TBL1.weight FROM (
+            SELECT TBL1.productno, TBL1.product, TBL1.prod_categ, TBL1.location, TBL1.room, TBL1.partner_type, prod2.volume, prod2.weight, TBL1.lotserial, LOT2.use_date + interval '%s' as expired_date, TBL1.date_in, TBL1.aging, TBL1.total_product, TBL1.stock, TBL1.reserved, TBL1.volume, TBL1.weight FROM (
                 SELECT
                     quant.product_id as prodid, 
                     prod_tmpl.default_code as productno,
@@ -242,6 +243,7 @@ class MsReportStock(models.TransientModel):
                     categ.name as prod_categ, 
                     substring(loc.complete_name from position('/' IN loc.complete_name)+1) as location,
                     CASE WHEN loc.x_studio_cool_room THEN 'cool' ELSE 'dry' END as room,
+                    quant.partner_type as partner_type,
                     lot.name as lotserial,
                     lot.id as lotid,
                     quant.in_date + interval '%s' as date_in, 
@@ -266,7 +268,7 @@ class MsReportStock(models.TransientModel):
                 WHERE 
                     %s and %s 
                 GROUP BY 
-                    prodid, productno, product, prod_categ, location, room, date_in, lotserial, lotid
+                    prodid, productno, product, prod_categ, location, room, partner_type, date_in, lotserial, lotid
                 ORDER BY 
                     date_in ) TBL1 
             LEFT JOIN

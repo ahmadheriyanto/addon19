@@ -11,6 +11,26 @@ from odoo.exceptions import ValidationError
 class StockMoveLine(models.Model):
     _inherit = "stock.move.line"
 
+    def _action_done(self):
+        res = super()._action_done()
+        for ml in self:
+            picking = ml.picking_id
+            if not picking:
+                continue
+            company = picking.company_id or self.env.company
+            dest_loc = ml.location_dest_id if ml.qty_done > 0 else ml.location_id
+            domain = [
+                ('company_id', '=', company.id),
+                ('product_id', '=', ml.product_id.id),
+                ('location_id', '=', dest_loc.id),
+            ]
+            if ml.lot_id:
+                domain.append(('lot_id', '=', ml.lot_id.id))
+            quants = self.env['stock.quant'].sudo().search(domain)
+            if quants:
+                quants.write({'partner_type': picking.partner_type or ''})
+        return res
+
     @api.model
     def default_get(self, fields):
         """
