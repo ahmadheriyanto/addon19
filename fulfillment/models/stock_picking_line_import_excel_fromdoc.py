@@ -22,8 +22,8 @@ class ImportReceiptLine(models.TransientModel):
         #raise UserError(_('self._context.active_id = %s' % self.env.context["active_id"]))
         stock_picking = self.env['stock.picking'].search([('id','=',self.env.context["active_id"])])
 
-        if not stock_picking.partner_id.id:
-            raise UserError(_('Please specify Partner in document %s' % stock_picking.name))
+        # if not stock_picking.partner_id.id:
+        #     raise UserError(_('Please specify Partner in document %s' % stock_picking.name))
 
         if not stock_picking.picking_type_id.id:
             raise UserError(_('Please specify Operation Type in document %s' % stock_picking.name))
@@ -191,5 +191,19 @@ class ImportReceiptLine(models.TransientModel):
                             'principal_courier_id': partner.id,
                         })
 
+                if row['CONTACT']:
+                    Partner = self.env['res.partner'].sudo()
+                    partner = Partner.search([('name', 'ilike', row['CONTACT'])], limit=1)
+                    if partner:
+                        stock_picking.update({
+                            'partner_id': partner.id,
+                        })
+                    else:
+                        raise UserError(_('Contact %s does not exist in master data' % row['CONTACT'])) 
+
+                if row['PARTNER TYPE']:
+                    stock_picking.update({
+                        'partner_type': row['PARTNER TYPE'],
+                    })
 
                 #raise UserError(_('%s' % stock_move))
