@@ -173,4 +173,25 @@ class ImportReceiptLine(models.TransientModel):
                     else:
                         stock_picking.origin = row['PLS NUMBER']
 
+                if row['CUSTOMER NAME']:
+                    stock_picking.update({
+                        'principal_customer_name': row['CUSTOMER NAME'],
+                    })
+
+                if row['CUSTOMER ADDRESS']:
+                    stock_picking.update({
+                        'principal_customer_address': row['CUSTOMER ADDRESS'],
+                    })
+                
+                if row['COURIER']:
+                    company = self.env.company.sudo()
+                    transporter_cat = company.fulfillment_transporter_category_id
+                    Partner = self.env['res.partner'].sudo()
+                    partner = Partner.search([('category_id', 'in', [transporter_cat.id]), ('name', 'ilike', row['COURIER'])], limit=1)
+                    if partner:
+                        stock_picking.update({
+                            'principal_courier_id': partner.id,
+                        })
+
+
                 #raise UserError(_('%s' % stock_move))
