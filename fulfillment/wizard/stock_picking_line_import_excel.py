@@ -323,7 +323,14 @@ class ImportReceiptLine(models.TransientModel):
                 })   
 
                 if check_lot:
-                    stock_move.sudo().write({'lot_ids': [(6, 0, check_lot.ids)]})             
+                    stock_move.sudo().write({'lot_ids': [(6, 0, check_lot.ids)]})
+
+                # Ensure move line UoM is set correctly after creation
+                for move_line in stock_move.move_line_ids:
+                    move_line.sudo().write({
+                        'product_uom_id': check_uom.id,
+                        'quantity_product_uom': row['QTY'],
+                    })             
 
             #raise UserError(_('Sukses import_data, stock_picking_id = %s' % stock_picking_id))
             if (self.picking_type_id.code == 'incoming'):
