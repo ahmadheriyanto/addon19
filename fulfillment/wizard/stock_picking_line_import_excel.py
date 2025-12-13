@@ -290,14 +290,14 @@ class ImportReceiptLine(models.TransientModel):
                         'product_id': check_product.id,
                         'ref': ijno,
                         'use_expiration_date': True if row['EXPIRED'] else False,
-                        'expiration_date': datetime(*xlrd.xldate_as_tuple(row['EXPIRED'], 0)) if row['EXPIRED'] else False,
+                        'expiration_date': datetime(*xlrd.xldate_as_tuple(row['EXPIRED'], False)) if row['EXPIRED'] else False,
                     })
                 else:
                     check_lot = check_lot[0]
                     if row['EXPIRED']:
                         check_lot.sudo().write({
                             'use_expiration_date': True,
-                            'expiration_date': datetime(*xlrd.xldate_as_tuple(row['EXPIRED'], 0)),
+                            'expiration_date': datetime(*xlrd.xldate_as_tuple(row['EXPIRED'], False)),
                         })
 
                 qty_done = row['QTY']
