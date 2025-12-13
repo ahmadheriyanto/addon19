@@ -214,7 +214,20 @@ class ImportReceiptLine(models.TransientModel):
                         _('Product %s does not exist in master data' % product_no))
                 else:
                     check_product = check_product[0]
+                    if row['EXPIRED']:
+                        if not check_product.tracking in ['lot', 'serial']:
+                            raise UserError(
+                                _('Product %s must have Lot/Serial Number tracking enabled in master data' % product_no))
+                        if not check_product.use_expiration_date:
+                            raise UserError(
+                                _('Product %s must have Use Expiration Date enabled in master data' % product_no))
                     
+                # Cek Product harus bukan Kit atau Manufactured
+                mrp = self.env['mrp.bom'].search([('product_tmpl_id','=',check_product.product_tmpl_id.id)])
+                if mrp:
+                    raise UserError(
+                        _('Product %s is a Manufactured/Kit Product, only storable product allowed for inbound process' % product_no))
+
                 #raise UserError(_('System Sedang di supervisi oleh Ahmad: sukses check_product '))
             
                 # Check master UoM
@@ -276,11 +289,16 @@ class ImportReceiptLine(models.TransientModel):
                         'name': batchno,
                         'product_id': check_product.id,
                         'ref': ijno,
-                        'use_expiration_date': True,
-                        'expiration_date': datetime(*xlrd.xldate_as_tuple(row['EXPIRED'], 0))
+                        'use_expiration_date': True if row['EXPIRED'] else False,
+                        'expiration_date': datetime(*xlrd.xldate_as_tuple(row['EXPIRED'], 0)) if row['EXPIRED'] else False,
                     })
                 else:
                     check_lot = check_lot[0]
+                    if row['EXPIRED']:
+                        check_lot.sudo().write({
+                            'use_expiration_date': True,
+                            'expiration_date': datetime(*xlrd.xldate_as_tuple(row['EXPIRED'], 0)),
+                        })
 
                 qty_done = row['QTY']
 
